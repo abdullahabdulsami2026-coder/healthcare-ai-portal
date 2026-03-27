@@ -32,6 +32,13 @@ sys.path.insert(0, PROJECT_ROOT)
 
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
 
+from utils.clinical_interpretations import (
+    ECG_CLASS_EXPLANATIONS, ECG_METRIC_EXPLANATIONS,
+    interpret_heart_risk, interpret_xray,
+    CBC_EXPLANATIONS, interpret_diabetes_results,
+    interpret_lipid_results, interpret_kidney_results,
+    LAB_GENERAL_EXPLANATIONS,
+)
 from utils.clinical_calculators import (
     classify_value, CBC_RANGES, interpret_cbc,
     calculate_findrisc, classify_hba1c, classify_fasting_glucose,
@@ -1085,6 +1092,13 @@ elif section == "Health Risk Assessment":
             )
             st.plotly_chart(fig_radar, use_container_width=True)
 
+        # Detailed interpretation
+        st.markdown("---")
+        with st.expander("Detailed Report — What Your Results Mean", expanded=True):
+            st.markdown(interpret_heart_risk(
+                predicted, risk_score, age, sex, cp, trestbps, chol, thalach, oldpeak, ca
+            ))
+
 
 # ============================================================
 # CBC ANALYSIS SECTION
@@ -1238,6 +1252,22 @@ elif section == "CBC Analysis":
             st.markdown("**Clinical Interpretation**")
             for finding in findings:
                 st.info(finding)
+
+        # Detailed parameter explanations
+        st.markdown("---")
+        with st.expander("Detailed Report — What Each Parameter Means", expanded=False):
+            for param_name in cbc_values:
+                if param_name in CBC_EXPLANATIONS:
+                    ref = refs.get(param_name)
+                    val = cbc_values[param_name]
+                    if ref:
+                        status, _, _ = classify_value(val, ref["low"], ref["high"],
+                                                      ref.get("crit_low"), ref.get("crit_high"))
+                        st.markdown(f"**{param_name}: {val} {ref['unit']}** — _{status}_")
+                    else:
+                        st.markdown(f"**{param_name}: {val}%**")
+                    st.markdown(CBC_EXPLANATIONS[param_name])
+                    st.markdown("---")
 
         st.markdown("""
         <div class="disclaimer">
@@ -1455,6 +1485,13 @@ elif section == "Diabetes Screening":
 
         for msg in interp_msgs:
             st.info(msg)
+
+        # Detailed interpretation
+        st.markdown("---")
+        with st.expander("Detailed Report — What Your Results Mean", expanded=True):
+            st.markdown(interpret_diabetes_results(
+                dm_hba1c, dm_glucose, findrisc_score, findrisc_cat, findrisc_risk
+            ))
 
         st.markdown("""
         <div class="disclaimer">
@@ -1677,6 +1714,14 @@ elif section == "Lipid Panel / CV Risk":
 
         for msg in interp:
             st.info(msg)
+
+        # Detailed interpretation
+        st.markdown("---")
+        with st.expander("Detailed Report — What Your Lipid Results Mean", expanded=True):
+            st.markdown(interpret_lipid_results(
+                lp_tc, lp_ldl, lp_hdl, lp_trig,
+                ascvd_pct, ascvd_cat, tc_hdl_ratio, ldl_hdl_ratio
+            ))
 
         st.markdown("""
         <div class="disclaimer">
@@ -1927,6 +1972,14 @@ elif section == "Kidney Function":
         for msg in interp:
             st.info(msg)
 
+        # Detailed interpretation
+        st.markdown("---")
+        with st.expander("Detailed Report — What Your Kidney Results Mean", expanded=True):
+            st.markdown(interpret_kidney_results(
+                egfr_cr, egfr_cysc, ckd_stage, ckd_desc,
+                alb_stage, alb_desc, kf_uacr, kf_bun, kf_creat
+            ))
+
         st.markdown("""
         <div class="disclaimer">
             <strong>Clinical Disclaimer:</strong> This kidney function assessment uses the CKD-EPI 2021 race-free
@@ -2119,6 +2172,16 @@ elif section == "Lab Report Upload":
                     showlegend=False,
                 )
                 st.plotly_chart(fig_abn, use_container_width=True)
+
+        # Detailed explanations for each lab value
+        st.markdown("---")
+        with st.expander("Detailed Report — What Each Lab Value Means", expanded=False):
+            for r in results:
+                name = r["analyte"]
+                if name in LAB_GENERAL_EXPLANATIONS:
+                    st.markdown(f"**{name}: {r['value']} {r['unit']}** — _{r['status']}_")
+                    st.markdown(LAB_GENERAL_EXPLANATIONS[name])
+                    st.markdown("---")
 
         st.markdown("""
         <div class="disclaimer">
