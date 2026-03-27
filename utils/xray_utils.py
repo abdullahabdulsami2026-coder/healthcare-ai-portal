@@ -52,7 +52,10 @@ def get_grad_cam(model, img_array, class_index, last_conv_layer_name=None):
     Generate Grad-CAM heatmap for explainability.
     Shows which regions of the X-ray the model focused on.
     """
-    import tensorflow as tf
+    try:
+        import tensorflow as tf
+    except ImportError:
+        return None
 
     if last_conv_layer_name is None:
         # Find the last convolutional layer automatically

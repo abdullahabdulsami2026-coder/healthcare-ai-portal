@@ -35,7 +35,13 @@ def load_model(model_name, models_dir="models"):
     ext = os.path.splitext(path)[1]
 
     if ext in [".h5", ".keras"]:
-        from tensorflow import keras
+        try:
+            from tensorflow import keras
+        except ImportError:
+            raise FileNotFoundError(
+                f"TensorFlow not installed — cannot load '{model_name}'. "
+                f"Install tensorflow or tensorflow-cpu to use Keras models."
+            )
         return keras.models.load_model(path)
     elif ext in [".pkl", ".joblib"]:
         return joblib.load(path)
