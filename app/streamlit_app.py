@@ -458,6 +458,25 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
+# Navigation State
+# ============================================================
+NAV_OPTIONS = [
+    "Home", "Heart / ECG", "Chest X-Ray", "Health Risk Assessment",
+    "CBC Analysis", "Diabetes Screening", "Lipid Panel / CV Risk",
+    "Kidney Function", "Lab Report Upload",
+]
+
+if "nav_index" not in st.session_state:
+    st.session_state.nav_index = 0
+
+
+def navigate_to(section_name):
+    """Set navigation to a specific section."""
+    if section_name in NAV_OPTIONS:
+        st.session_state.nav_index = NAV_OPTIONS.index(section_name)
+
+
+# ============================================================
 # Sidebar Navigation
 # ============================================================
 with st.sidebar:
@@ -467,12 +486,15 @@ with st.sidebar:
 
     section = st.radio(
         "Navigation",
-        ["Home", "Heart / ECG", "Chest X-Ray", "Health Risk Assessment",
-         "CBC Analysis", "Diabetes Screening", "Lipid Panel / CV Risk",
-         "Kidney Function", "Lab Report Upload"],
-        index=0,
+        NAV_OPTIONS,
+        index=st.session_state.nav_index,
+        key="nav_radio",
         label_visibility="collapsed",
     )
+
+    # Keep session state in sync when user clicks sidebar directly
+    if NAV_OPTIONS.index(section) != st.session_state.nav_index:
+        st.session_state.nav_index = NAV_OPTIONS.index(section)
 
     st.markdown("---")
 
@@ -521,131 +543,54 @@ if section == "Home":
     </div>
     """, unsafe_allow_html=True)
 
-    # Feature cards — Row 1
-    col1, col2, col3 = st.columns(3, gap="medium")
+    # Feature cards — clickable navigation
+    CARD_DATA = [
+        ("Heart / ECG", "icon-ecg", "❤️", "Heart / ECG Analysis",
+         "Upload 12-lead ECG recordings for real-time arrhythmia classification. Get heart rate, HRV metrics, and diagnostic probabilities.", "1D CNN Model"),
+        ("Chest X-Ray", "icon-xray", "🫁", "Chest X-Ray Analysis",
+         "Upload frontal chest X-ray images for pneumonia detection and multi-label disease classification.", "Transfer Learning"),
+        ("Health Risk Assessment", "icon-risk", "📊", "Health Risk Assessment",
+         "Enter patient vitals and clinical data to generate a heart disease risk score with interactive charts.", "Random Forest"),
+        ("CBC Analysis", "icon-cbc", "🩸", "CBC Analysis",
+         "Enter complete blood count values for automated classification, WBC differential visualization, and clinical interpretation.", "Clinical Algorithm"),
+        ("Diabetes Screening", "icon-diabetes", "🍩", "Diabetes Screening",
+         "Comprehensive diabetes risk assessment using HbA1c, fasting glucose, and the validated FINDRISC questionnaire.", "FINDRISC"),
+        ("Lipid Panel / CV Risk", "icon-lipid", "🫀", "Lipid Panel / CV Risk",
+         "Lipid classification per ATP III guidelines with 10-year ASCVD risk estimation using Pooled Cohort Equations.", "Pooled Cohort Equations"),
+        ("Kidney Function", "icon-kidney", "🫘", "Kidney Function",
+         "CKD-EPI 2021 race-free eGFR calculation with KDIGO staging, albuminuria assessment, and risk matrix.", "CKD-EPI 2021"),
+        ("Lab Report Upload", "icon-lab", "📄", "Lab Report Upload",
+         "Upload lab report PDFs for automated parsing and analysis. Get color-coded flags for abnormal values.", "PDF Parsing"),
+    ]
 
-    with col1:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon icon-ecg">❤️</div>
-            <h3>Heart / ECG Analysis</h3>
-            <p>
-                Upload 12-lead ECG recordings for real-time arrhythmia classification.
-                Get heart rate, HRV metrics, and diagnostic probabilities across 5 cardiac conditions.
-            </p>
-            <span class="feature-tag">1D CNN Model</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col2:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon icon-xray">🫁</div>
-            <h3>Chest X-Ray Analysis</h3>
-            <p>
-                Upload frontal chest X-ray images for pneumonia detection and
-                multi-label disease classification with visual attention maps.
-            </p>
-            <span class="feature-tag">Transfer Learning</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col3:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon icon-risk">📊</div>
-            <h3>Health Risk Assessment</h3>
-            <p>
-                Enter patient vitals and clinical data to generate a heart disease
-                risk score with interactive gauge, radar chart, and factor analysis.
-            </p>
-            <span class="feature-tag">Random Forest</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Feature cards — Row 2
-    col4, col5, col6 = st.columns(3, gap="medium")
-
-    with col4:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon icon-cbc">🩸</div>
-            <h3>CBC Analysis</h3>
-            <p>
-                Enter complete blood count values for automated classification, WBC differential
-                visualization, and clinical interpretation with color-coded flags.
-            </p>
-            <span class="feature-tag">Clinical Algorithm</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col5:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon icon-diabetes">🍩</div>
-            <h3>Diabetes Screening</h3>
-            <p>
-                Comprehensive diabetes risk assessment using HbA1c, fasting glucose,
-                and the validated FINDRISC questionnaire with 10-year risk prediction.
-            </p>
-            <span class="feature-tag">FINDRISC</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col6:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon icon-lipid">🫀</div>
-            <h3>Lipid Panel / CV Risk</h3>
-            <p>
-                Lipid classification per ATP III guidelines with 10-year ASCVD risk
-                estimation using the Pooled Cohort Equations (ACC/AHA 2013).
-            </p>
-            <span class="feature-tag">Pooled Cohort Equations</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Feature cards — Row 3
-    col7, col8, col9 = st.columns(3, gap="medium")
-
-    with col7:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon icon-kidney">🫘</div>
-            <h3>Kidney Function</h3>
-            <p>
-                CKD-EPI 2021 race-free eGFR calculation with KDIGO staging,
-                albuminuria assessment, and the full KDIGO risk matrix visualization.
-            </p>
-            <span class="feature-tag">CKD-EPI 2021</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col8:
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon icon-lab">📄</div>
-            <h3>Lab Report Upload</h3>
-            <p>
-                Upload lab report PDFs for automated parsing and analysis. Get color-coded
-                flags for abnormal values with clinical reference range comparison.
-            </p>
-            <span class="feature-tag">PDF Parsing</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col9:
-        st.markdown("""
-        <div class="info-card" style="height:100%;">
-            <h4>More Coming Soon</h4>
-            <p>Additional clinical modules are under development including thyroid function,
-            liver panel analysis, and coagulation studies. Stay tuned for updates.</p>
-        </div>
-        """, unsafe_allow_html=True)
+    for row_start in range(0, len(CARD_DATA), 3):
+        cols = st.columns(3, gap="medium")
+        for i, col in enumerate(cols):
+            idx = row_start + i
+            if idx < len(CARD_DATA):
+                nav_key, icon_cls, emoji, title, desc, tag = CARD_DATA[idx]
+                with col:
+                    st.markdown(f"""
+                    <div class="feature-card">
+                        <div class="feature-icon {icon_cls}">{emoji}</div>
+                        <h3>{title}</h3>
+                        <p>{desc}</p>
+                        <span class="feature-tag">{tag}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    if st.button(f"Open {title}", key=f"nav_{nav_key}", use_container_width=True):
+                        navigate_to(nav_key)
+                        st.rerun()
+            else:
+                with col:
+                    st.markdown("""
+                    <div class="info-card" style="height:100%;">
+                        <h4>More Coming Soon</h4>
+                        <p>Thyroid function, liver panel, and coagulation studies.</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+        if row_start + 3 < len(CARD_DATA):
+            st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -920,6 +865,7 @@ elif section == "Chest X-Ray":
                 fig.update_layout(
                     height=300, font=dict(family="Inter"),
                     margin=dict(t=20, b=20),
+                    template="plotly_white",
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
@@ -941,6 +887,7 @@ elif section == "Chest X-Ray":
                 fig.update_layout(
                     height=300, font=dict(family="Inter"),
                     margin=dict(t=20, b=20),
+                    template="plotly_white",
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
