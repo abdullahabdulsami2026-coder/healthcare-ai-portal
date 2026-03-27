@@ -570,9 +570,13 @@ if section == "Home":
                         <span class="feature-tag">{tag}</span>
                     </div>
                     """, unsafe_allow_html=True)
-                    if st.button(f"Open {title}", key=f"nav_{nav_key}", use_container_width=True):
-                        navigate_to(nav_key)
-                        st.rerun()
+                    st.button(
+                        f"Open {title}",
+                        key=f"nav_{nav_key}",
+                        use_container_width=True,
+                        on_click=navigate_to,
+                        args=(nav_key,),
+                    )
             else:
                 with col:
                     st.markdown("""
