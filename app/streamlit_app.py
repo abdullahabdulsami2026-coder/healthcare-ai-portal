@@ -4,15 +4,22 @@ Healthcare AI Prediction Portal
 Multi-section dashboard for medical data analysis and prediction.
 
 Sections:
-1. Heart / ECG Analysis — Upload ECG, get arrhythmia classification
-2. Chest X-Ray Analysis — Upload X-ray, get pneumonia/disease prediction
-3. Health Risk Assessment — Input vitals, get heart disease risk score
+1. Home — Overview and feature cards
+2. Heart / ECG Analysis — Upload ECG, get arrhythmia classification
+3. Chest X-Ray Analysis — Upload X-ray, get pneumonia/disease prediction
+4. Health Risk Assessment — Input vitals, get heart disease risk score
+5. CBC Analysis — Complete blood count analysis with clinical interpretation
+6. Diabetes Screening — HbA1c, fasting glucose, and FINDRISC score
+7. Lipid Panel / CV Risk — Lipid classification and 10-year ASCVD risk
+8. Kidney Function — CKD-EPI eGFR, KDIGO staging, albuminuria
+9. Lab Report Upload — Parse and analyze lab report PDFs
 
 Run: streamlit run app/streamlit_app.py
 """
 
 import os
 import sys
+import re
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -24,6 +31,14 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
+
+from utils.clinical_calculators import (
+    classify_value, CBC_RANGES, interpret_cbc,
+    calculate_findrisc, classify_hba1c, classify_fasting_glucose,
+    classify_lipid, LIPID_CLASSES, calculate_ascvd_risk,
+    ckd_epi_creatinine, ckd_epi_cystatin, stage_ckd, stage_albuminuria,
+    DEMO_LAB_REPORT,
+)
 
 # ============================================================
 # Page Config
@@ -132,6 +147,11 @@ st.markdown("""
     .icon-ecg { background: linear-gradient(135deg, #fce4ec, #f8bbd0); }
     .icon-xray { background: linear-gradient(135deg, #e3f2fd, #bbdefb); }
     .icon-risk { background: linear-gradient(135deg, #e8f5e9, #c8e6c9); }
+    .icon-cbc { background: linear-gradient(135deg, #f3e5f5, #ce93d8); }
+    .icon-diabetes { background: linear-gradient(135deg, #fff3e0, #ffcc80); }
+    .icon-lipid { background: linear-gradient(135deg, #e0f7fa, #80deea); }
+    .icon-kidney { background: linear-gradient(135deg, #fce4ec, #ef9a9a); }
+    .icon-lab { background: linear-gradient(135deg, #e8eaf6, #9fa8da); }
 
     .feature-card h3 {
         font-size: 1.1rem;
@@ -339,6 +359,97 @@ st.markdown("""
         margin: 0 auto 16px;
     }
 
+    /* ── Flag Badges (lab values) ────────────────── */
+    .flag-critical {
+        background: #fadbd8;
+        color: #922b21;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .flag-high {
+        background: #fdebd0;
+        color: #e67e22;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .flag-low {
+        background: #fdebd0;
+        color: #e67e22;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .flag-normal {
+        background: #d5f5e3;
+        color: #27ae60;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    /* ── Lab Table ───────────────────────────────── */
+    .lab-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+    }
+    .lab-table th {
+        background: #f0f4f8;
+        padding: 10px 14px;
+        text-align: left;
+        font-weight: 600;
+        color: #4a6274;
+        border-bottom: 2px solid #e0e6ec;
+    }
+    .lab-table td {
+        padding: 10px 14px;
+        border-bottom: 1px solid #eef1f5;
+    }
+
+    /* ── Disclaimer ──────────────────────────────── */
+    .disclaimer {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 10px;
+        padding: 14px 18px;
+        font-size: 0.82rem;
+        color: #856404;
+        margin: 16px 0;
+    }
+
+    /* ── CKD / KDIGO Grid ────────────────────────── */
+    .ckd-grid {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+    }
+    .ckd-grid th {
+        background: #f0f4f8;
+        padding: 10px 14px;
+        text-align: center;
+        font-weight: 600;
+        color: #4a6274;
+        border-bottom: 2px solid #e0e6ec;
+    }
+    .ckd-grid td {
+        padding: 8px 14px;
+        border-bottom: 1px solid #eef1f5;
+        text-align: center;
+    }
+    .ckd-cell {
+        padding: 8px;
+        border-radius: 6px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+
     /* ── Hide Streamlit defaults ────────────────── */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -356,7 +467,9 @@ with st.sidebar:
 
     section = st.radio(
         "Navigation",
-        ["Home", "Heart / ECG", "Chest X-Ray", "Health Risk Assessment"],
+        ["Home", "Heart / ECG", "Chest X-Ray", "Health Risk Assessment",
+         "CBC Analysis", "Diabetes Screening", "Lipid Panel / CV Risk",
+         "Kidney Function", "Lab Report Upload"],
         index=0,
         label_visibility="collapsed",
     )
@@ -372,6 +485,11 @@ with st.sidebar:
     st.markdown(f"{'🟢' if heart_ok else '🟡'} Heart Risk Model")
     st.markdown(f"{'🟢' if ecg_ok else '🟡'} ECG Classifier")
     st.markdown(f"{'🟢' if xray_ok else '🟡'} X-Ray Classifier")
+    st.markdown("🟢 CBC Analysis — Algorithm")
+    st.markdown("🟢 Diabetes Screening — Algorithm")
+    st.markdown("🟢 Lipid Panel / CV Risk — Algorithm")
+    st.markdown("🟢 Kidney Function — Algorithm")
+    st.markdown("🟢 Lab Report Upload — Algorithm")
 
     st.markdown("---")
     st.markdown("##### Built by")
@@ -398,12 +516,12 @@ if section == "Home":
             <span class="stat-pill"><strong>21,837</strong>&nbsp; ECG Records</span>
             <span class="stat-pill"><strong>112,120</strong>&nbsp; X-Ray Images</span>
             <span class="stat-pill"><strong>920</strong>&nbsp; Patient Records</span>
-            <span class="stat-pill"><strong>3</strong>&nbsp; AI Models</span>
+            <span class="stat-pill"><strong>9</strong>&nbsp; Clinical Modules</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Feature cards
+    # Feature cards — Row 1
     col1, col2, col3 = st.columns(3, gap="medium")
 
     with col1:
@@ -442,6 +560,90 @@ if section == "Home":
                 risk score with interactive gauge, radar chart, and factor analysis.
             </p>
             <span class="feature-tag">Random Forest</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Feature cards — Row 2
+    col4, col5, col6 = st.columns(3, gap="medium")
+
+    with col4:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon icon-cbc">🩸</div>
+            <h3>CBC Analysis</h3>
+            <p>
+                Enter complete blood count values for automated classification, WBC differential
+                visualization, and clinical interpretation with color-coded flags.
+            </p>
+            <span class="feature-tag">Clinical Algorithm</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col5:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon icon-diabetes">🍩</div>
+            <h3>Diabetes Screening</h3>
+            <p>
+                Comprehensive diabetes risk assessment using HbA1c, fasting glucose,
+                and the validated FINDRISC questionnaire with 10-year risk prediction.
+            </p>
+            <span class="feature-tag">FINDRISC</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col6:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon icon-lipid">🫀</div>
+            <h3>Lipid Panel / CV Risk</h3>
+            <p>
+                Lipid classification per ATP III guidelines with 10-year ASCVD risk
+                estimation using the Pooled Cohort Equations (ACC/AHA 2013).
+            </p>
+            <span class="feature-tag">Pooled Cohort Equations</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Feature cards — Row 3
+    col7, col8, col9 = st.columns(3, gap="medium")
+
+    with col7:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon icon-kidney">🫘</div>
+            <h3>Kidney Function</h3>
+            <p>
+                CKD-EPI 2021 race-free eGFR calculation with KDIGO staging,
+                albuminuria assessment, and the full KDIGO risk matrix visualization.
+            </p>
+            <span class="feature-tag">CKD-EPI 2021</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col8:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon icon-lab">📄</div>
+            <h3>Lab Report Upload</h3>
+            <p>
+                Upload lab report PDFs for automated parsing and analysis. Get color-coded
+                flags for abnormal values with clinical reference range comparison.
+            </p>
+            <span class="feature-tag">PDF Parsing</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col9:
+        st.markdown("""
+        <div class="info-card" style="height:100%;">
+            <h4>More Coming Soon</h4>
+            <p>Additional clinical modules are under development including thyroid function,
+            liver panel analysis, and coagulation studies. Stay tuned for updates.</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -939,6 +1141,1062 @@ elif section == "Health Risk Assessment":
                 font=dict(family="Inter"),
             )
             st.plotly_chart(fig_radar, use_container_width=True)
+
+
+# ============================================================
+# CBC ANALYSIS SECTION
+# ============================================================
+elif section == "CBC Analysis":
+    st.markdown('<p class="section-header">CBC Analysis</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Enter complete blood count values for automated classification, differential visualization, and clinical interpretation.</p>', unsafe_allow_html=True)
+
+    with st.container():
+        col1, col2, col3 = st.columns(3, gap="medium")
+
+        with col1:
+            st.markdown("**Patient Info & Basic CBC**")
+            cbc_sex = st.selectbox("Sex", ["Male", "Female"], key="cbc_sex")
+            cbc_wbc = st.number_input("WBC (x10\u00b3/\u00b5L)", min_value=0.0, max_value=100.0, value=7.0, step=0.1, key="cbc_wbc")
+            cbc_rbc = st.number_input("RBC (x10\u2076/\u00b5L)", min_value=0.0, max_value=15.0, value=4.7, step=0.1, key="cbc_rbc")
+            cbc_hgb = st.number_input("Hemoglobin (g/dL)", min_value=0.0, max_value=25.0, value=14.0, step=0.1, key="cbc_hgb")
+            cbc_hct = st.number_input("Hematocrit (%)", min_value=0.0, max_value=80.0, value=42.0, step=0.1, key="cbc_hct")
+
+        with col2:
+            st.markdown("**RBC Indices**")
+            cbc_mcv = st.number_input("MCV (fL)", min_value=0.0, max_value=150.0, value=88.0, step=0.1, key="cbc_mcv")
+            cbc_mch = st.number_input("MCH (pg)", min_value=0.0, max_value=50.0, value=29.0, step=0.1, key="cbc_mch")
+            cbc_mchc = st.number_input("MCHC (g/dL)", min_value=0.0, max_value=45.0, value=33.5, step=0.1, key="cbc_mchc")
+            cbc_rdw = st.number_input("RDW (%)", min_value=0.0, max_value=30.0, value=13.0, step=0.1, key="cbc_rdw")
+            cbc_plt = st.number_input("Platelets (x10\u00b3/\u00b5L)", min_value=0.0, max_value=2000.0, value=250.0, step=1.0, key="cbc_plt")
+
+        with col3:
+            st.markdown("**WBC Differential (%)**")
+            cbc_neut = st.number_input("Neutrophils %", min_value=0.0, max_value=100.0, value=60.0, step=0.1, key="cbc_neut")
+            cbc_lymph = st.number_input("Lymphocytes %", min_value=0.0, max_value=100.0, value=30.0, step=0.1, key="cbc_lymph")
+            cbc_mono = st.number_input("Monocytes %", min_value=0.0, max_value=100.0, value=6.0, step=0.1, key="cbc_mono")
+            cbc_eos = st.number_input("Eosinophils %", min_value=0.0, max_value=100.0, value=3.0, step=0.1, key="cbc_eos")
+            cbc_baso = st.number_input("Basophils %", min_value=0.0, max_value=100.0, value=0.5, step=0.1, key="cbc_baso")
+
+    st.markdown("")
+
+    if st.button("Analyze", type="primary", use_container_width=True, key="cbc_analyze"):
+        sex_key = cbc_sex.lower()
+        refs = CBC_RANGES[sex_key]
+
+        cbc_values = {
+            "WBC": cbc_wbc, "RBC": cbc_rbc, "Hemoglobin": cbc_hgb,
+            "Hematocrit": cbc_hct, "MCV": cbc_mcv, "MCH": cbc_mch,
+            "MCHC": cbc_mchc, "RDW": cbc_rdw, "Platelets": cbc_plt,
+            "Neutrophils": cbc_neut,
+        }
+
+        st.markdown("---")
+
+        # Metric cards for key values
+        mc1, mc2, mc3, mc4 = st.columns(4, gap="medium")
+
+        for col_obj, param_name, display_val, unit in [
+            (mc1, "WBC", cbc_wbc, "x10\u00b3/\u00b5L"),
+            (mc2, "Hemoglobin", cbc_hgb, "g/dL"),
+            (mc3, "Hematocrit", cbc_hct, "%"),
+            (mc4, "Platelets", cbc_plt, "x10\u00b3/\u00b5L"),
+        ]:
+            ref = refs[param_name]
+            status, css_class, color = classify_value(
+                display_val, ref["low"], ref["high"],
+                ref.get("crit_low"), ref.get("crit_high")
+            )
+            if status == "Normal":
+                card_class = "risk-low"
+            elif "Critical" in status:
+                card_class = "risk-high"
+            else:
+                card_class = "risk-medium"
+
+            with col_obj:
+                st.markdown(f"""
+                <div class="metric-card {card_class}">
+                    <p class="metric-label">{param_name}</p>
+                    <p class="metric-value">{display_val} <small style="font-size:0.9rem;font-weight:400;color:#8899a6;">{unit}</small></p>
+                    <span class="{css_class}">{status}</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Full CBC table
+        all_params = [
+            ("WBC", cbc_wbc), ("RBC", cbc_rbc), ("Hemoglobin", cbc_hgb),
+            ("Hematocrit", cbc_hct), ("MCV", cbc_mcv), ("MCH", cbc_mch),
+            ("MCHC", cbc_mchc), ("RDW", cbc_rdw), ("Platelets", cbc_plt),
+        ]
+
+        table_rows = ""
+        for param_name, val in all_params:
+            ref = refs[param_name]
+            status, css_class, color = classify_value(
+                val, ref["low"], ref["high"],
+                ref.get("crit_low"), ref.get("crit_high")
+            )
+            table_rows += f"""
+            <tr>
+                <td style="font-weight:600;">{param_name}</td>
+                <td>{val}</td>
+                <td>{ref['unit']}</td>
+                <td>{ref['low']} - {ref['high']}</td>
+                <td><span class="{css_class}">{status}</span></td>
+            </tr>"""
+
+        st.markdown(f"""
+        <table class="lab-table">
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Value</th>
+                    <th>Unit</th>
+                    <th>Reference Range</th>
+                    <th>Flag</th>
+                </tr>
+            </thead>
+            <tbody>{table_rows}</tbody>
+        </table>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # WBC Differential donut chart
+        col_donut, col_interp = st.columns(2, gap="medium")
+
+        with col_donut:
+            diff_labels = ["Neutrophils", "Lymphocytes", "Monocytes", "Eosinophils", "Basophils"]
+            diff_values = [cbc_neut, cbc_lymph, cbc_mono, cbc_eos, cbc_baso]
+            diff_colors = ["#2c5364", "#5dade2", "#48c9b0", "#f4d03f", "#e74c3c"]
+
+            fig_diff = go.Figure(data=[go.Pie(
+                labels=diff_labels, values=diff_values,
+                hole=0.4,
+                marker=dict(colors=diff_colors),
+                textinfo="label+percent",
+                textfont=dict(family="Inter", size=12),
+            )])
+            fig_diff.update_layout(
+                title=dict(text="WBC Differential", font=dict(size=16, family="Inter")),
+                height=350,
+                template="plotly_white",
+                font=dict(family="Inter"),
+                margin=dict(t=60, b=20, l=20, r=20),
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
+            )
+            st.plotly_chart(fig_diff, use_container_width=True)
+
+        with col_interp:
+            findings = interpret_cbc(cbc_values, sex_key)
+            st.markdown("**Clinical Interpretation**")
+            for finding in findings:
+                st.info(finding)
+
+        st.markdown("""
+        <div class="disclaimer">
+            <strong>Clinical Disclaimer:</strong> This CBC analysis is generated by an automated algorithm using
+            standard reference ranges. It is intended for educational and screening purposes only. Always consult
+            a qualified healthcare provider for clinical decision-making.
+        </div>
+        """, unsafe_allow_html=True)
+
+
+# ============================================================
+# DIABETES SCREENING SECTION
+# ============================================================
+elif section == "Diabetes Screening":
+    st.markdown('<p class="section-header">Diabetes Screening</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Comprehensive diabetes risk assessment using HbA1c, fasting glucose, and the FINDRISC questionnaire.</p>', unsafe_allow_html=True)
+
+    with st.container():
+        col1, col2, col3 = st.columns(3, gap="medium")
+
+        with col1:
+            st.markdown("**Lab Values**")
+            dm_hba1c = st.number_input("HbA1c (%)", min_value=3.0, max_value=15.0, value=5.5, step=0.1, key="dm_hba1c")
+            dm_glucose = st.number_input("Fasting Glucose (mg/dL)", min_value=40, max_value=500, value=95, key="dm_glucose")
+
+            st.markdown("**Demographics**")
+            dm_age = st.number_input("Age", min_value=18, max_value=120, value=50, key="dm_age")
+            dm_bmi = st.number_input("BMI (kg/m\u00b2)", min_value=10.0, max_value=60.0, value=25.0, step=0.1, key="dm_bmi")
+            dm_waist = st.number_input("Waist Circumference (cm)", min_value=50, max_value=200, value=90, key="dm_waist")
+            dm_sex = st.selectbox("Sex", ["Male", "Female"], key="dm_sex")
+
+        with col2:
+            st.markdown("**Family & History**")
+            dm_family = st.selectbox("Family History of Diabetes", ["None", "One parent", "Both parents"], key="dm_family")
+            dm_activity = st.selectbox("Physical Activity", ["Active", "Low"], key="dm_activity")
+            dm_fruit = st.selectbox("Daily Fruit/Vegetable Intake", ["Yes", "No"], key="dm_fruit")
+
+        with col3:
+            st.markdown("**Medical History**")
+            dm_bp_med = st.selectbox("BP Medication", ["No", "Yes"], key="dm_bp_med")
+            dm_high_glucose = st.selectbox("History of High Blood Glucose", ["No", "Yes"], key="dm_high_glucose")
+
+    st.markdown("")
+
+    if st.button("Screen", type="primary", use_container_width=True, key="dm_screen"):
+        # Classify lab values
+        hba1c_label, hba1c_color = classify_hba1c(dm_hba1c)
+        glucose_label, glucose_color = classify_fasting_glucose(dm_glucose)
+
+        # Map inputs for FINDRISC
+        family_map = {"None": "none", "One parent": "one_parent", "Both parents": "both_parents"}
+        findrisc_score, findrisc_cat, findrisc_risk = calculate_findrisc(
+            age=dm_age,
+            bmi=dm_bmi,
+            waist=dm_waist,
+            sex=dm_sex.lower(),
+            activity=dm_activity.lower(),
+            fruit_veg=dm_fruit.lower(),
+            bp_meds=dm_bp_med.lower(),
+            high_glucose=dm_high_glucose.lower(),
+            family_hx=family_map[dm_family],
+        )
+
+        st.markdown("---")
+
+        # Metric cards
+        mc1, mc2, mc3 = st.columns(3, gap="medium")
+
+        with mc1:
+            hba1c_card = "risk-low" if hba1c_label == "Normal" else ("risk-high" if hba1c_label == "Diabetes" else "risk-medium")
+            st.markdown(f"""
+            <div class="metric-card {hba1c_card}">
+                <p class="metric-label">HbA1c Classification</p>
+                <p class="metric-value">{dm_hba1c}% <small style="font-size:0.9rem;font-weight:400;color:{hba1c_color};">{hba1c_label}</small></p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with mc2:
+            gluc_card = "risk-low" if glucose_label == "Normal" else ("risk-high" if glucose_label == "Diabetes" else "risk-medium")
+            st.markdown(f"""
+            <div class="metric-card {gluc_card}">
+                <p class="metric-label">Fasting Glucose</p>
+                <p class="metric-value">{dm_glucose} <small style="font-size:0.9rem;font-weight:400;color:{glucose_color};">mg/dL - {glucose_label}</small></p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with mc3:
+            if findrisc_score < 7:
+                fr_card = "risk-low"
+            elif findrisc_score <= 14:
+                fr_card = "risk-medium"
+            else:
+                fr_card = "risk-high"
+            st.markdown(f"""
+            <div class="metric-card {fr_card}">
+                <p class="metric-label">FINDRISC Score</p>
+                <p class="metric-value">{findrisc_score} <small style="font-size:0.9rem;font-weight:400;color:#8899a6;">/ 26 - {findrisc_cat}</small></p>
+                <p style="color:#6b7b8d;font-size:0.85rem;margin-top:4px;">10-year risk: {findrisc_risk}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        col_gauge, col_bar = st.columns(2, gap="medium")
+
+        with col_gauge:
+            # FINDRISC gauge chart
+            fig_findrisc = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=findrisc_score,
+                number={"font": {"size": 42, "family": "Inter", "color": "#1a2332"}},
+                title={"text": f"FINDRISC Score — {findrisc_cat}", "font": {"size": 16, "family": "Inter"}},
+                gauge={
+                    "axis": {"range": [0, 26], "tickwidth": 1, "tickcolor": "#d0d9e1"},
+                    "bar": {"color": "#2c5364", "thickness": 0.75},
+                    "bgcolor": "white",
+                    "borderwidth": 0,
+                    "steps": [
+                        {"range": [0, 7], "color": "#d5f5e3"},
+                        {"range": [7, 12], "color": "#eafaf1"},
+                        {"range": [12, 15], "color": "#fef9e7"},
+                        {"range": [15, 20], "color": "#fdebd0"},
+                        {"range": [20, 26], "color": "#fadbd8"},
+                    ],
+                    "threshold": {
+                        "line": {"color": "#e74c3c", "width": 3},
+                        "thickness": 0.8,
+                        "value": findrisc_score,
+                    },
+                },
+            ))
+            fig_findrisc.update_layout(
+                height=320,
+                margin=dict(t=60, b=20, l=30, r=30),
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Inter"),
+            )
+            st.plotly_chart(fig_findrisc, use_container_width=True)
+
+        with col_bar:
+            # Risk factor contribution bar chart
+            # Recalculate individual contributions
+            contributions = {}
+
+            if dm_age < 45: contributions["Age"] = 0
+            elif dm_age <= 54: contributions["Age"] = 2
+            elif dm_age <= 64: contributions["Age"] = 3
+            else: contributions["Age"] = 4
+
+            if dm_bmi < 25: contributions["BMI"] = 0
+            elif dm_bmi <= 30: contributions["BMI"] = 1
+            else: contributions["BMI"] = 3
+
+            if dm_sex.lower() == "male":
+                if dm_waist < 94: contributions["Waist"] = 0
+                elif dm_waist <= 102: contributions["Waist"] = 3
+                else: contributions["Waist"] = 4
+            else:
+                if dm_waist < 80: contributions["Waist"] = 0
+                elif dm_waist <= 88: contributions["Waist"] = 3
+                else: contributions["Waist"] = 4
+
+            contributions["Activity"] = 2 if dm_activity == "Low" else 0
+            contributions["Diet"] = 1 if dm_fruit == "No" else 0
+            contributions["BP Meds"] = 2 if dm_bp_med == "Yes" else 0
+            contributions["High Glucose Hx"] = 5 if dm_high_glucose == "Yes" else 0
+
+            fam_map_pts = {"None": 0, "One parent": 3, "Both parents": 5}
+            contributions["Family Hx"] = fam_map_pts[dm_family]
+
+            contrib_df = pd.DataFrame({
+                "Factor": list(contributions.keys()),
+                "Points": list(contributions.values()),
+            })
+            contrib_df = contrib_df.sort_values("Points", ascending=True)
+
+            fig_contrib = px.bar(
+                contrib_df, x="Points", y="Factor",
+                orientation="h",
+                color="Points",
+                color_continuous_scale=["#d5f5e3", "#f39c12", "#e74c3c"],
+            )
+            fig_contrib.update_layout(
+                title=dict(text="Risk Factor Contributions", font=dict(size=16, family="Inter")),
+                height=320,
+                template="plotly_white",
+                font=dict(family="Inter"),
+                showlegend=False,
+                xaxis_title="Points",
+                yaxis_title="",
+                margin=dict(t=60, b=20, l=20, r=20),
+            )
+            st.plotly_chart(fig_contrib, use_container_width=True)
+
+        # Clinical interpretation
+        st.markdown("**Clinical Interpretation**")
+        interp_msgs = []
+        if hba1c_label == "Diabetes":
+            interp_msgs.append("HbA1c is in the diabetic range (>= 6.5%). Confirmatory testing and clinical evaluation recommended.")
+        elif hba1c_label == "Prediabetes":
+            interp_msgs.append("HbA1c indicates prediabetes (5.7-6.4%). Lifestyle modification and monitoring advised.")
+
+        if glucose_label == "Diabetes":
+            interp_msgs.append("Fasting glucose is in the diabetic range (>= 126 mg/dL). Repeat testing recommended for confirmation.")
+        elif glucose_label == "Prediabetes":
+            interp_msgs.append("Fasting glucose indicates impaired fasting glucose (100-125 mg/dL).")
+
+        interp_msgs.append(f"FINDRISC score of {findrisc_score} indicates {findrisc_cat.lower()} risk with an estimated 10-year probability of developing type 2 diabetes of {findrisc_risk}.")
+
+        if findrisc_score >= 15:
+            interp_msgs.append("High FINDRISC score warrants oral glucose tolerance testing (OGTT) and close follow-up.")
+
+        if not interp_msgs:
+            interp_msgs.append("All screening parameters are within normal ranges.")
+
+        for msg in interp_msgs:
+            st.info(msg)
+
+        st.markdown("""
+        <div class="disclaimer">
+            <strong>Clinical Disclaimer:</strong> This diabetes screening tool uses ADA criteria for HbA1c/glucose
+            classification and the validated FINDRISC questionnaire. It is intended for screening purposes only and
+            does not replace clinical judgment or diagnostic testing.
+        </div>
+        """, unsafe_allow_html=True)
+
+
+# ============================================================
+# LIPID PANEL / CV RISK SECTION
+# ============================================================
+elif section == "Lipid Panel / CV Risk":
+    st.markdown('<p class="section-header">Lipid Panel / CV Risk</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Lipid classification and 10-year ASCVD risk estimation using the Pooled Cohort Equations.</p>', unsafe_allow_html=True)
+
+    with st.container():
+        col1, col2, col3 = st.columns(3, gap="medium")
+
+        with col1:
+            st.markdown("**Lipid Panel**")
+            lp_tc = st.number_input("Total Cholesterol (mg/dL)", min_value=50, max_value=500, value=200, key="lp_tc")
+            lp_ldl = st.number_input("LDL (mg/dL)", min_value=20, max_value=400, value=120, key="lp_ldl")
+            lp_hdl = st.number_input("HDL (mg/dL)", min_value=10, max_value=150, value=50, key="lp_hdl")
+            lp_trig = st.number_input("Triglycerides (mg/dL)", min_value=20, max_value=2000, value=150, key="lp_trig")
+
+        with col2:
+            st.markdown("**Demographics**")
+            lp_age = st.number_input("Age", min_value=20, max_value=120, value=55, key="lp_age")
+            lp_sex = st.selectbox("Sex", ["Male", "Female"], key="lp_sex")
+            lp_race = st.selectbox("Race", ["White", "African American", "Other"], key="lp_race")
+
+        with col3:
+            st.markdown("**Risk Factors**")
+            lp_sbp = st.number_input("Systolic BP (mmHg)", min_value=80, max_value=250, value=130, key="lp_sbp")
+            lp_bp_med = st.selectbox("On BP Medication", ["No", "Yes"], key="lp_bp_med")
+            lp_smoker = st.selectbox("Current Smoker", ["No", "Yes"], key="lp_smoker")
+            lp_diabetes = st.selectbox("Diabetes", ["No", "Yes"], key="lp_diabetes")
+
+    st.markdown("")
+
+    if st.button("Assess Risk", type="primary", use_container_width=True, key="lp_assess"):
+        # Classify lipids
+        tc_label, tc_color = classify_lipid("Total Cholesterol", lp_tc)
+        ldl_label, ldl_color = classify_lipid("LDL", lp_ldl)
+        hdl_label, hdl_color = classify_lipid("HDL", lp_hdl)
+        trig_label, trig_color = classify_lipid("Triglycerides", lp_trig)
+
+        # Derived values
+        non_hdl = lp_tc - lp_hdl
+        tc_hdl_ratio = round(lp_tc / lp_hdl, 2) if lp_hdl > 0 else 0
+        ldl_hdl_ratio = round(lp_ldl / lp_hdl, 2) if lp_hdl > 0 else 0
+
+        # ASCVD risk
+        ascvd_pct, ascvd_cat, ascvd_color = calculate_ascvd_risk(
+            age=lp_age,
+            sex=lp_sex.lower(),
+            race=lp_race,
+            total_chol=lp_tc,
+            hdl=lp_hdl,
+            sbp=lp_sbp,
+            bp_treated=(lp_bp_med == "Yes"),
+            smoker=(lp_smoker == "Yes"),
+            diabetes=(lp_diabetes == "Yes"),
+        )
+
+        st.markdown("---")
+
+        # Metric cards
+        mc1, mc2, mc3, mc4 = st.columns(4, gap="medium")
+
+        with mc1:
+            if ascvd_pct is not None:
+                ascvd_card = "risk-low" if ascvd_pct < 5 else ("risk-high" if ascvd_pct >= 20 else "risk-medium")
+            else:
+                ascvd_card = ""
+            ascvd_display = f"{ascvd_pct}%" if ascvd_pct is not None else "N/A"
+            st.markdown(f"""
+            <div class="metric-card {ascvd_card}">
+                <p class="metric-label">10-Year ASCVD Risk</p>
+                <p class="metric-value">{ascvd_display}</p>
+                <p style="color:{ascvd_color};font-size:0.85rem;font-weight:600;margin-top:4px;">{ascvd_cat}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with mc2:
+            st.markdown(f"""
+            <div class="metric-card" style="border-left-color:{tc_color};">
+                <p class="metric-label">Total Cholesterol</p>
+                <p class="metric-value" style="color:{tc_color};">{lp_tc} <small style="font-size:0.85rem;font-weight:400;">mg/dL</small></p>
+                <p style="color:{tc_color};font-size:0.85rem;font-weight:600;margin-top:4px;">{tc_label}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with mc3:
+            st.markdown(f"""
+            <div class="metric-card" style="border-left-color:{ldl_color};">
+                <p class="metric-label">LDL Cholesterol</p>
+                <p class="metric-value" style="color:{ldl_color};">{lp_ldl} <small style="font-size:0.85rem;font-weight:400;">mg/dL</small></p>
+                <p style="color:{ldl_color};font-size:0.85rem;font-weight:600;margin-top:4px;">{ldl_label}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with mc4:
+            st.markdown(f"""
+            <div class="metric-card" style="border-left-color:{hdl_color};">
+                <p class="metric-label">HDL Cholesterol</p>
+                <p class="metric-value" style="color:{hdl_color};">{lp_hdl} <small style="font-size:0.85rem;font-weight:400;">mg/dL</small></p>
+                <p style="color:{hdl_color};font-size:0.85rem;font-weight:600;margin-top:4px;">{hdl_label}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        col_gauge, col_bar = st.columns(2, gap="medium")
+
+        with col_gauge:
+            # ASCVD gauge
+            gauge_val = ascvd_pct if ascvd_pct is not None else 0
+            fig_ascvd = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=gauge_val,
+                number={"suffix": "%", "font": {"size": 42, "family": "Inter", "color": "#1a2332"}},
+                title={"text": f"10-Year ASCVD Risk — {ascvd_cat}", "font": {"size": 16, "family": "Inter"}},
+                gauge={
+                    "axis": {"range": [0, 30], "tickwidth": 1, "tickcolor": "#d0d9e1"},
+                    "bar": {"color": "#2c5364", "thickness": 0.75},
+                    "bgcolor": "white",
+                    "borderwidth": 0,
+                    "steps": [
+                        {"range": [0, 5], "color": "#d5f5e3"},
+                        {"range": [5, 7.5], "color": "#eafaf1"},
+                        {"range": [7.5, 20], "color": "#fdebd0"},
+                        {"range": [20, 30], "color": "#fadbd8"},
+                    ],
+                    "threshold": {
+                        "line": {"color": "#e74c3c", "width": 3},
+                        "thickness": 0.8,
+                        "value": gauge_val,
+                    },
+                },
+            ))
+            fig_ascvd.update_layout(
+                height=320,
+                margin=dict(t=60, b=20, l=30, r=30),
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Inter"),
+            )
+            st.plotly_chart(fig_ascvd, use_container_width=True)
+
+        with col_bar:
+            # Lipid values bar chart
+            lipid_names = ["Total Cholesterol", "LDL", "HDL", "Triglycerides"]
+            lipid_vals = [lp_tc, lp_ldl, lp_hdl, lp_trig]
+            lipid_colors = [tc_color, ldl_color, hdl_color, trig_color]
+
+            fig_lipid = go.Figure(data=[go.Bar(
+                x=lipid_names, y=lipid_vals,
+                marker_color=lipid_colors,
+                text=[f"{v} mg/dL" for v in lipid_vals],
+                textposition="outside",
+                textfont=dict(family="Inter", size=12),
+            )])
+            fig_lipid.update_layout(
+                title=dict(text="Lipid Panel Values", font=dict(size=16, family="Inter")),
+                height=320,
+                template="plotly_white",
+                font=dict(family="Inter"),
+                yaxis_title="mg/dL",
+                xaxis_title="",
+                margin=dict(t=60, b=20, l=20, r=20),
+                showlegend=False,
+            )
+            st.plotly_chart(fig_lipid, use_container_width=True)
+
+        # Lipid ratios
+        st.markdown("**Lipid Ratios**")
+        rc1, rc2, rc3 = st.columns(3, gap="medium")
+        with rc1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <p class="metric-label">Non-HDL Cholesterol</p>
+                <p class="metric-value">{non_hdl} <small style="font-size:0.9rem;font-weight:400;color:#8899a6;">mg/dL</small></p>
+            </div>
+            """, unsafe_allow_html=True)
+        with rc2:
+            ratio_class = "risk-low" if tc_hdl_ratio < 4.5 else ("risk-high" if tc_hdl_ratio > 6 else "risk-medium")
+            st.markdown(f"""
+            <div class="metric-card {ratio_class}">
+                <p class="metric-label">TC / HDL Ratio</p>
+                <p class="metric-value">{tc_hdl_ratio}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        with rc3:
+            lratio_class = "risk-low" if ldl_hdl_ratio < 3 else ("risk-high" if ldl_hdl_ratio > 4.5 else "risk-medium")
+            st.markdown(f"""
+            <div class="metric-card {lratio_class}">
+                <p class="metric-label">LDL / HDL Ratio</p>
+                <p class="metric-value">{ldl_hdl_ratio}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Clinical interpretation
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("**Clinical Interpretation**")
+        interp = []
+        if ascvd_pct is not None:
+            interp.append(f"Estimated 10-year ASCVD risk is {ascvd_pct}% ({ascvd_cat} risk). " +
+                          ("Statin therapy should be considered." if ascvd_pct >= 7.5 else "Continue risk factor management."))
+        else:
+            interp.append("ASCVD risk calculation requires age 40-79.")
+
+        if ldl_label in ["High", "Very High"]:
+            interp.append(f"LDL cholesterol is {ldl_label.lower()} at {lp_ldl} mg/dL. ACC/AHA guidelines recommend statin therapy evaluation.")
+        if hdl_label == "Low (Risk Factor)":
+            interp.append(f"HDL cholesterol is low at {lp_hdl} mg/dL, an independent cardiovascular risk factor.")
+        if trig_label in ["High", "Very High"]:
+            interp.append(f"Triglycerides are {trig_label.lower()} at {lp_trig} mg/dL. Evaluate for secondary causes and consider treatment.")
+
+        for msg in interp:
+            st.info(msg)
+
+        st.markdown("""
+        <div class="disclaimer">
+            <strong>Clinical Disclaimer:</strong> This cardiovascular risk assessment uses the ACC/AHA Pooled Cohort
+            Equations (2013) and ATP III lipid classifications. It is intended for screening and educational purposes
+            only. Clinical decisions should be made in consultation with a healthcare provider.
+        </div>
+        """, unsafe_allow_html=True)
+
+
+# ============================================================
+# KIDNEY FUNCTION SECTION
+# ============================================================
+elif section == "Kidney Function":
+    st.markdown('<p class="section-header">Kidney Function</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">CKD-EPI 2021 race-free eGFR estimation with KDIGO staging and risk classification.</p>', unsafe_allow_html=True)
+
+    with st.container():
+        col1, col2, col3 = st.columns(3, gap="medium")
+
+        with col1:
+            st.markdown("**Required Inputs**")
+            kf_cr = st.number_input("Serum Creatinine (mg/dL)", min_value=0.1, max_value=20.0, value=1.0, step=0.1, key="kf_cr")
+            kf_age = st.number_input("Age", min_value=18, max_value=120, value=55, key="kf_age")
+            kf_sex = st.selectbox("Sex", ["Male", "Female"], key="kf_sex")
+
+        with col2:
+            st.markdown("**Albuminuria & BUN**")
+            kf_uacr = st.number_input("UACR (mg/g)", min_value=0.0, max_value=5000.0, value=15.0, step=1.0, key="kf_uacr")
+            kf_bun = st.number_input("BUN (mg/dL)", min_value=1.0, max_value=150.0, value=15.0, step=0.5, key="kf_bun")
+
+        with col3:
+            st.markdown("**Optional: Cystatin C**")
+            kf_use_cysc = st.checkbox("Include Cystatin C", value=False, key="kf_use_cysc")
+            kf_cysc = st.number_input("Cystatin C (mg/L)", min_value=0.1, max_value=10.0, value=0.9, step=0.1, key="kf_cysc", disabled=not kf_use_cysc)
+
+    st.markdown("")
+
+    if st.button("Calculate", type="primary", use_container_width=True, key="kf_calc"):
+        sex_key = kf_sex.lower()
+
+        # CKD-EPI creatinine-based eGFR
+        egfr_cr = ckd_epi_creatinine(kf_cr, kf_age, sex_key)
+        ckd_stage, ckd_desc, ckd_color = stage_ckd(egfr_cr)
+        alb_stage, alb_desc, alb_color = stage_albuminuria(kf_uacr)
+
+        # Optional cystatin C
+        egfr_cysc = None
+        if kf_use_cysc:
+            egfr_cysc = ckd_epi_cystatin(kf_cysc, kf_age, sex_key)
+
+        # BUN/Creatinine ratio
+        bun_cr_ratio = round(kf_bun / kf_cr, 1) if kf_cr > 0 else 0
+
+        st.markdown("---")
+
+        # Metric cards
+        mc1, mc2, mc3 = st.columns(3, gap="medium")
+
+        with mc1:
+            egfr_card = "risk-low" if egfr_cr >= 60 else ("risk-high" if egfr_cr < 30 else "risk-medium")
+            st.markdown(f"""
+            <div class="metric-card {egfr_card}">
+                <p class="metric-label">eGFR (Creatinine)</p>
+                <p class="metric-value">{egfr_cr} <small style="font-size:0.9rem;font-weight:400;color:#8899a6;">mL/min/1.73m\u00b2</small></p>
+                <p style="color:{ckd_color};font-size:0.85rem;font-weight:600;margin-top:4px;">Stage {ckd_stage}: {ckd_desc}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with mc2:
+            alb_card = "risk-low" if kf_uacr < 30 else ("risk-high" if kf_uacr > 300 else "risk-medium")
+            st.markdown(f"""
+            <div class="metric-card {alb_card}">
+                <p class="metric-label">UACR / Albuminuria</p>
+                <p class="metric-value">{kf_uacr} <small style="font-size:0.9rem;font-weight:400;color:#8899a6;">mg/g</small></p>
+                <p style="color:{alb_color};font-size:0.85rem;font-weight:600;margin-top:4px;">{alb_stage}: {alb_desc}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with mc3:
+            bun_card = "risk-low" if 10 <= bun_cr_ratio <= 20 else "risk-medium"
+            st.markdown(f"""
+            <div class="metric-card {bun_card}">
+                <p class="metric-label">BUN / Creatinine Ratio</p>
+                <p class="metric-value">{bun_cr_ratio}</p>
+                <p style="color:#6b7b8d;font-size:0.85rem;margin-top:4px;">Normal: 10-20</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        col_gauge, col_comp = st.columns(2, gap="medium")
+
+        with col_gauge:
+            # eGFR gauge chart with CKD stage color bands
+            fig_egfr = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=egfr_cr,
+                number={"font": {"size": 42, "family": "Inter", "color": "#1a2332"}},
+                title={"text": f"eGFR — Stage {ckd_stage}", "font": {"size": 16, "family": "Inter"}},
+                gauge={
+                    "axis": {"range": [0, 120], "tickwidth": 1, "tickcolor": "#d0d9e1"},
+                    "bar": {"color": "#2c5364", "thickness": 0.75},
+                    "bgcolor": "white",
+                    "borderwidth": 0,
+                    "steps": [
+                        {"range": [0, 15], "color": "#fadbd8"},      # G5
+                        {"range": [15, 30], "color": "#f5b7b1"},     # G4
+                        {"range": [30, 45], "color": "#fdebd0"},     # G3b
+                        {"range": [45, 60], "color": "#fef9e7"},     # G3a
+                        {"range": [60, 90], "color": "#eafaf1"},     # G2
+                        {"range": [90, 120], "color": "#d5f5e3"},    # G1
+                    ],
+                    "threshold": {
+                        "line": {"color": "#e74c3c", "width": 3},
+                        "thickness": 0.8,
+                        "value": egfr_cr,
+                    },
+                },
+            ))
+            fig_egfr.update_layout(
+                height=320,
+                margin=dict(t=60, b=20, l=30, r=30),
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Inter"),
+            )
+            st.plotly_chart(fig_egfr, use_container_width=True)
+
+        with col_comp:
+            if egfr_cysc is not None:
+                # Comparison bars
+                comp_df = pd.DataFrame({
+                    "Method": ["Creatinine-based", "Cystatin C-based"],
+                    "eGFR": [egfr_cr, egfr_cysc],
+                })
+                fig_comp = go.Figure(data=[go.Bar(
+                    x=comp_df["Method"], y=comp_df["eGFR"],
+                    marker_color=["#2c5364", "#5dade2"],
+                    text=[f"{v} mL/min" for v in comp_df["eGFR"]],
+                    textposition="outside",
+                    textfont=dict(family="Inter", size=13),
+                )])
+                fig_comp.update_layout(
+                    title=dict(text="eGFR Comparison", font=dict(size=16, family="Inter")),
+                    height=320,
+                    template="plotly_white",
+                    font=dict(family="Inter"),
+                    yaxis_title="eGFR (mL/min/1.73m\u00b2)",
+                    xaxis_title="",
+                    margin=dict(t=60, b=20, l=20, r=20),
+                    showlegend=False,
+                )
+                st.plotly_chart(fig_comp, use_container_width=True)
+            else:
+                st.markdown("""
+                <div class="info-card">
+                    <h4>Cystatin C Comparison</h4>
+                    <p>Enable Cystatin C input to see a comparison between creatinine-based
+                    and cystatin C-based eGFR estimates. Cystatin C may be more accurate
+                    in certain populations (elderly, extreme muscle mass, etc.).</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # KDIGO Risk Matrix
+        st.markdown("**KDIGO Risk Matrix — Prognosis of CKD by GFR and Albuminuria**")
+
+        # Define the risk colors for the KDIGO matrix
+        # Rows: G1, G2, G3a, G3b, G4, G5
+        # Cols: A1, A2, A3
+        kdigo_colors = [
+            ["#d5f5e3", "#eafaf1", "#fdebd0"],  # G1
+            ["#d5f5e3", "#eafaf1", "#fdebd0"],  # G2
+            ["#eafaf1", "#fdebd0", "#fadbd8"],  # G3a
+            ["#fdebd0", "#fadbd8", "#fadbd8"],  # G3b
+            ["#fadbd8", "#fadbd8", "#f1948a"],  # G4
+            ["#fadbd8", "#f1948a", "#f1948a"],  # G5
+        ]
+        kdigo_labels = [
+            ["Low", "Moderate", "High"],
+            ["Low", "Moderate", "High"],
+            ["Moderate", "High", "Very High"],
+            ["High", "Very High", "Very High"],
+            ["Very High", "Very High", "Very High"],
+            ["Very High", "Very High", "Very High"],
+        ]
+        gfr_stages = [
+            ("G1", "\u226590"),
+            ("G2", "60-89"),
+            ("G3a", "45-59"),
+            ("G3b", "30-44"),
+            ("G4", "15-29"),
+            ("G5", "<15"),
+        ]
+        alb_stages = [
+            ("A1", "<30"),
+            ("A2", "30-300"),
+            ("A3", ">300"),
+        ]
+
+        # Determine patient's position
+        gfr_row_map = {"G1": 0, "G2": 1, "G3a": 2, "G3b": 3, "G4": 4, "G5": 5}
+        alb_col_map = {"A1": 0, "A2": 1, "A3": 2}
+        patient_row = gfr_row_map.get(ckd_stage, -1)
+        patient_col = alb_col_map.get(alb_stage, -1)
+
+        matrix_html = '<table class="ckd-grid"><thead><tr><th>GFR Stage</th><th>eGFR</th>'
+        for astage, arange in alb_stages:
+            matrix_html += f'<th>{astage}<br><small>{arange} mg/g</small></th>'
+        matrix_html += '</tr></thead><tbody>'
+
+        for i, (gstage, grange) in enumerate(gfr_stages):
+            matrix_html += f'<tr><td style="font-weight:600;">{gstage}</td><td>{grange}</td>'
+            for j in range(3):
+                bg = kdigo_colors[i][j]
+                label = kdigo_labels[i][j]
+                border = "3px solid #1a2332" if (i == patient_row and j == patient_col) else "none"
+                matrix_html += f'<td><div class="ckd-cell" style="background:{bg};border:{border};">{label}</div></td>'
+            matrix_html += '</tr>'
+        matrix_html += '</tbody></table>'
+
+        st.markdown(matrix_html, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Clinical interpretation
+        st.markdown("**Clinical Interpretation**")
+        interp = []
+        interp.append(f"eGFR (creatinine-based) is {egfr_cr} mL/min/1.73m\u00b2, corresponding to CKD stage {ckd_stage} ({ckd_desc}).")
+        if egfr_cysc is not None:
+            cysc_stage, cysc_desc, _ = stage_ckd(egfr_cysc)
+            interp.append(f"eGFR (cystatin C-based) is {egfr_cysc} mL/min/1.73m\u00b2, corresponding to CKD stage {cysc_stage} ({cysc_desc}).")
+            if abs(egfr_cr - egfr_cysc) > 15:
+                interp.append("Significant discordance between creatinine and cystatin C eGFR. Consider factors affecting creatinine (muscle mass, diet) or cystatin C (thyroid dysfunction, corticosteroids).")
+
+        interp.append(f"Albuminuria stage: {alb_stage} ({alb_desc}) with UACR of {kf_uacr} mg/g.")
+
+        if bun_cr_ratio > 20:
+            interp.append(f"Elevated BUN/Creatinine ratio ({bun_cr_ratio}) may suggest pre-renal azotemia, GI bleeding, or high protein intake.")
+        elif bun_cr_ratio < 10:
+            interp.append(f"Low BUN/Creatinine ratio ({bun_cr_ratio}) may suggest liver disease, malnutrition, or overhydration.")
+
+        risk_label = kdigo_labels[patient_row][patient_col] if patient_row >= 0 and patient_col >= 0 else "Unknown"
+        interp.append(f"KDIGO composite risk category: {risk_label}. " +
+                      ("Referral to nephrology recommended." if risk_label in ["High", "Very High"] else "Routine monitoring appropriate."))
+
+        for msg in interp:
+            st.info(msg)
+
+        st.markdown("""
+        <div class="disclaimer">
+            <strong>Clinical Disclaimer:</strong> This kidney function assessment uses the CKD-EPI 2021 race-free
+            equations and KDIGO 2012 staging guidelines. It is intended for screening and educational purposes only.
+            Clinical decisions should be made in consultation with a nephrologist or qualified healthcare provider.
+        </div>
+        """, unsafe_allow_html=True)
+
+
+# ============================================================
+# LAB REPORT UPLOAD SECTION
+# ============================================================
+elif section == "Lab Report Upload":
+    st.markdown('<p class="section-header">Lab Report Upload</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Upload a lab report PDF for automated parsing, or explore the demo report with color-coded analysis.</p>', unsafe_allow_html=True)
+
+    uploaded_pdf = st.file_uploader("Upload Lab Report (PDF)", type=["pdf"], key="lab_pdf")
+
+    tab_parsed, tab_raw = st.tabs(["Parsed Results", "Raw Text"])
+
+    # Try to parse PDF
+    lab_data = None
+    raw_text = ""
+    used_demo = False
+
+    if uploaded_pdf is not None:
+        try:
+            import pdfplumber
+            with pdfplumber.open(uploaded_pdf) as pdf:
+                pages_text = []
+                for page in pdf.pages:
+                    pages_text.append(page.extract_text() or "")
+                raw_text = "\n".join(pages_text)
+
+            # Attempt regex extraction
+            # Pattern: analyte name, value, unit, reference range
+            parsed_labs = []
+            # Try common lab report patterns
+            patterns = [
+                # Pattern: Name  Value  Unit  Low-High
+                r'([A-Za-z\s/\-]+?)\s+([\d.]+)\s+([A-Za-z/%\u00b3\u00b5\u2076\s]+?)\s+([\d.]+)\s*[-\u2013]\s*([\d.]+)',
+            ]
+            for pattern in patterns:
+                matches = re.findall(pattern, raw_text)
+                for match in matches:
+                    try:
+                        analyte = match[0].strip()
+                        value = float(match[1])
+                        unit = match[2].strip()
+                        ref_low = float(match[3])
+                        ref_high = float(match[4])
+                        parsed_labs.append({
+                            "analyte": analyte,
+                            "value": value,
+                            "unit": unit,
+                            "ref_low": ref_low,
+                            "ref_high": ref_high,
+                        })
+                    except (ValueError, IndexError):
+                        continue
+
+            if parsed_labs:
+                lab_data = parsed_labs
+            else:
+                lab_data = DEMO_LAB_REPORT
+                used_demo = True
+                st.warning("Could not parse lab values from PDF. Showing demo data for illustration.")
+
+        except ImportError:
+            st.warning("pdfplumber is not installed. Install with: pip install pdfplumber. Showing demo data.")
+            lab_data = DEMO_LAB_REPORT
+            used_demo = True
+            raw_text = "(PDF parsing unavailable — pdfplumber not installed)"
+        except Exception as e:
+            st.error(f"Error reading PDF: {e}")
+            lab_data = DEMO_LAB_REPORT
+            used_demo = True
+    else:
+        lab_data = DEMO_LAB_REPORT
+        used_demo = True
+
+    with tab_parsed:
+        if lab_data:
+            # Classify each value
+            results = []
+            for item in lab_data:
+                status, css_class, color = classify_value(
+                    item["value"], item["ref_low"], item["ref_high"]
+                )
+                results.append({**item, "status": status, "css_class": css_class, "color": color})
+
+            # Summary metrics
+            total_tests = len(results)
+            normal_count = sum(1 for r in results if r["status"] == "Normal")
+            abnormal_count = total_tests - normal_count
+
+            sc1, sc2, sc3 = st.columns(3, gap="medium")
+            with sc1:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <p class="metric-label">Total Tests</p>
+                    <p class="metric-value">{total_tests}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            with sc2:
+                st.markdown(f"""
+                <div class="metric-card risk-low">
+                    <p class="metric-label">Normal</p>
+                    <p class="metric-value">{normal_count}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            with sc3:
+                abn_class = "risk-high" if abnormal_count > 0 else "risk-low"
+                st.markdown(f"""
+                <div class="metric-card {abn_class}">
+                    <p class="metric-label">Abnormal</p>
+                    <p class="metric-value">{abnormal_count}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            if used_demo:
+                st.markdown("""
+                <div class="info-card">
+                    <h4>Demo Lab Report</h4>
+                    <p>Displaying sample lab data for demonstration. Upload a PDF to analyze your own report.</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+            # Styled HTML table
+            table_rows = ""
+            for r in results:
+                table_rows += f"""
+                <tr>
+                    <td style="font-weight:600;">{r['analyte']}</td>
+                    <td>{r['value']}</td>
+                    <td>{r['unit']}</td>
+                    <td>{r['ref_low']} - {r['ref_high']}</td>
+                    <td><span class="{r['css_class']}">{r['status']}</span></td>
+                </tr>"""
+
+            st.markdown(f"""
+            <table class="lab-table">
+                <thead>
+                    <tr>
+                        <th>Analyte</th>
+                        <th>Value</th>
+                        <th>Unit</th>
+                        <th>Reference Range</th>
+                        <th>Flag</th>
+                    </tr>
+                </thead>
+                <tbody>{table_rows}</tbody>
+            </table>
+            """, unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # Abnormal values bar chart
+            abnormal_results = [r for r in results if r["status"] != "Normal"]
+            if abnormal_results:
+                st.markdown("**Abnormal Values — Deviation from Reference Range**")
+                abn_names = []
+                abn_deviations = []
+                abn_colors = []
+                for r in abnormal_results:
+                    abn_names.append(r["analyte"])
+                    if r["value"] > r["ref_high"]:
+                        dev = r["value"] - r["ref_high"]
+                    else:
+                        dev = r["ref_low"] - r["value"]
+                    abn_deviations.append(round(dev, 2))
+                    abn_colors.append(r["color"])
+
+                fig_abn = go.Figure(data=[go.Bar(
+                    x=abn_names, y=abn_deviations,
+                    marker_color=abn_colors,
+                    text=[f"+{d}" if d > 0 else str(d) for d in abn_deviations],
+                    textposition="outside",
+                    textfont=dict(family="Inter", size=12),
+                )])
+                fig_abn.update_layout(
+                    height=320,
+                    template="plotly_white",
+                    font=dict(family="Inter"),
+                    yaxis_title="Deviation from Reference",
+                    xaxis_title="",
+                    margin=dict(t=40, b=20, l=20, r=20),
+                    showlegend=False,
+                )
+                st.plotly_chart(fig_abn, use_container_width=True)
+
+        st.markdown("""
+        <div class="disclaimer">
+            <strong>Disclaimer:</strong> Automated PDF parsing may be inaccurate. Values extracted from uploaded
+            reports should be verified against the original document. This tool is for educational and screening
+            purposes only and does not replace professional laboratory interpretation.
+        </div>
+        """, unsafe_allow_html=True)
+
+    with tab_raw:
+        if raw_text:
+            st.text_area("Raw Extracted Text", raw_text, height=400)
+        else:
+            st.info("Upload a PDF to see the raw extracted text. Demo mode does not have raw text.")
+
+        st.markdown("""
+        <div class="disclaimer">
+            <strong>Disclaimer:</strong> Automated PDF parsing may be inaccurate. Always verify extracted values
+            against the original document.
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # ============================================================
