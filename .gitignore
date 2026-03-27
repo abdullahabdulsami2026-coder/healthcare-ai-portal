@@ -1,0 +1,26 @@
+# Data (too large for git)
+data/ecg/
+data/xray/
+data/vitals/*.csv
+!data/vitals/.gitkeep
+
+# Models
+models/*.h5
+models/*.keras
+models/*.pkl
+models/*.joblib
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+venv/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
