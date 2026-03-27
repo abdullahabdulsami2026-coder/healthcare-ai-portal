@@ -466,14 +466,11 @@ NAV_OPTIONS = [
     "Kidney Function", "Lab Report Upload",
 ]
 
-if "nav_index" not in st.session_state:
-    st.session_state.nav_index = 0
-
 
 def navigate_to(section_name):
-    """Set navigation to a specific section."""
+    """Set navigation to a specific section by updating the radio key directly."""
     if section_name in NAV_OPTIONS:
-        st.session_state.nav_index = NAV_OPTIONS.index(section_name)
+        st.session_state.nav_radio = section_name
 
 
 # ============================================================
@@ -487,14 +484,9 @@ with st.sidebar:
     section = st.radio(
         "Navigation",
         NAV_OPTIONS,
-        index=st.session_state.nav_index,
         key="nav_radio",
         label_visibility="collapsed",
     )
-
-    # Keep session state in sync when user clicks sidebar directly
-    if NAV_OPTIONS.index(section) != st.session_state.nav_index:
-        st.session_state.nav_index = NAV_OPTIONS.index(section)
 
     st.markdown("---")
 
