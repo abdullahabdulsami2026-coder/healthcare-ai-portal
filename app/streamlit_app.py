@@ -1,18 +1,9 @@
 """
-Healthcare AI Prediction Portal
-================================
+Healthcare AI Prediction Portal — Overhauled
+=============================================
 Multi-section dashboard for medical data analysis and prediction.
-
-Sections:
-1. Home — Overview and feature cards
-2. Heart / ECG Analysis — Upload ECG, get arrhythmia classification
-3. Chest X-Ray Analysis — Upload X-ray, get pneumonia/disease prediction
-4. Health Risk Assessment — Input vitals, get heart disease risk score
-5. CBC Analysis — Complete blood count analysis with clinical interpretation
-6. Diabetes Screening — HbA1c, fasting glucose, and FINDRISC score
-7. Lipid Panel / CV Risk — Lipid classification and 10-year ASCVD risk
-8. Kidney Function — CKD-EPI eGFR, KDIGO staging, albuminuria
-9. Lab Report Upload — Parse and analyze lab report PDFs
+Features: cached model loading, step-by-step questionnaire UI,
+sample data for testing, graceful demo fallbacks, HIPAA disclaimer.
 
 Run: streamlit run app/streamlit_app.py
 """
@@ -31,6 +22,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
+SAMPLES_DIR = os.path.join(PROJECT_ROOT, "data", "samples")
 
 from utils.clinical_interpretations import (
     ECG_CLASS_EXPLANATIONS, ECG_METRIC_EXPLANATIONS,
@@ -48,6 +40,113 @@ from utils.clinical_calculators import (
 )
 
 # ============================================================
+# Cached Model Loading (Part 1 — Stability)
+# ============================================================
+
+@st.cache_resource
+def load_heart_model():
+    """Load heart risk model with graceful fallback."""
+    try:
+        import joblib
+        model_path = os.path.join(MODELS_DIR, "heart_risk.joblib")
+        scaler_path = os.path.join(MODELS_DIR, "heart_risk_scaler.joblib")
+        if os.path.exists(model_path) and os.path.exists(scaler_path):
+            model = joblib.load(model_path)
+            scaler = joblib.load(scaler_path)
+            return model, scaler, True
+    except Exception:
+        pass
+    return None, None, False
+
+
+@st.cache_resource
+def load_ecg_model():
+    """Load ECG classifier with graceful fallback."""
+    try:
+        from tensorflow import keras
+        model_path = os.path.join(MODELS_DIR, "ecg_classifier.h5")
+        if os.path.exists(model_path):
+            model = keras.models.load_model(model_path)
+            return model, True
+    except Exception:
+        pass
+    return None, False
+
+
+@st.cache_resource
+def load_xray_model():
+    """Load X-ray classifier with graceful fallback."""
+    try:
+        from tensorflow import keras
+        model_path = os.path.join(MODELS_DIR, "xray_classifier.h5")
+        if os.path.exists(model_path):
+            model = keras.models.load_model(model_path)
+            return model, True
+    except Exception:
+        pass
+    return None, False
+
+
+@st.cache_data
+def get_sample_ecg_files():
+    """List available sample ECG files."""
+    ecg_dir = os.path.join(SAMPLES_DIR, "ecg")
+    if not os.path.exists(ecg_dir):
+        return {}
+    samples = {}
+    name_map = {
+        "sample_normal.npy": "Normal ECG",
+        "sample_mi.npy": "Myocardial Infarction",
+        "sample_sttc.npy": "ST/T Change",
+        "sample_hyp.npy": "Hypertrophy",
+        "sample_cd.npy": "Conduction Disturbance",
+    }
+    for fname, label in name_map.items():
+        fpath = os.path.join(ecg_dir, fname)
+        if os.path.exists(fpath):
+            samples[label] = fpath
+    return samples
+
+
+@st.cache_data
+def get_sample_xray_files():
+    """List available sample X-ray files."""
+    xray_dir = os.path.join(SAMPLES_DIR, "xray")
+    if not os.path.exists(xray_dir):
+        return {}
+    samples = {}
+    for fname in sorted(os.listdir(xray_dir)):
+        if fname.endswith((".png", ".jpg", ".jpeg")):
+            label = fname.replace("_", " ").replace(".png", "").replace(".jpg", "").title()
+            samples[label] = os.path.join(xray_dir, fname)
+    return samples
+
+
+# Pre-load models at startup
+_heart_model, _heart_scaler, _heart_loaded = load_heart_model()
+_ecg_model, _ecg_loaded = load_ecg_model()
+_xray_model, _xray_loaded = load_xray_model()
+
+
+def _fallback_risk(age, sex_val, cp_val, trestbps, chol, fbs_val, thalach, exang_val, oldpeak, ca):
+    """Rule-based fallback when ML model is unavailable."""
+    risk_factors = 0
+    if age > 55: risk_factors += 1
+    if sex_val == 1: risk_factors += 0.5
+    if cp_val == 3: risk_factors += 1.5
+    if trestbps > 140: risk_factors += 1
+    if chol > 240: risk_factors += 1
+    if fbs_val == 1: risk_factors += 0.5
+    if thalach < 120: risk_factors += 1
+    if exang_val == 1: risk_factors += 1.5
+    if oldpeak > 2: risk_factors += 1
+    if ca > 0: risk_factors += ca
+    risk_score = min(risk_factors / 10 * 100, 99)
+    predicted = "High Risk" if risk_score > 50 else "Low Risk"
+    return risk_score, predicted
+
+
+# ============================================================
 # Page Config
 # ============================================================
 st.set_page_config(
@@ -58,22 +157,20 @@ st.set_page_config(
 )
 
 # ============================================================
-# Custom CSS — polished, modern healthcare UI
+# Custom CSS
 # ============================================================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-    /* ── Global ─────────────────────────────────── */
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     .main { background: linear-gradient(180deg, #f0f4f8 0%, #e8eef3 100%); }
-
     .block-container { padding-top: 2rem; max-width: 1200px; }
 
-    /* ── Hero Banner ────────────────────────────── */
+    /* Hero Banner */
     .hero {
         background: linear-gradient(135deg, #0f2027 0%, #203a43 40%, #2c5364 100%);
         border-radius: 20px;
@@ -107,7 +204,6 @@ st.markdown("""
         line-height: 1.6;
     }
 
-    /* ── Stat Pill Row ──────────────────────────── */
     .stat-row {
         display: flex;
         gap: 12px;
@@ -126,7 +222,7 @@ st.markdown("""
     }
     .stat-pill strong { font-weight: 700; color: #5dade2; }
 
-    /* ── Feature Cards ──────────────────────────── */
+    /* Feature Cards */
     .feature-card {
         background: white;
         border-radius: 16px;
@@ -185,7 +281,7 @@ st.markdown("""
         letter-spacing: 0.04em;
     }
 
-    /* ── Metric Cards ───────────────────────────── */
+    /* Metric Cards */
     .metric-card {
         background: white;
         border-radius: 14px;
@@ -221,7 +317,7 @@ st.markdown("""
     .risk-low { border-left-color: #27ae60 !important; }
     .risk-low .metric-value { color: #229954; }
 
-    /* ── Section Headers ────────────────────────── */
+    /* Section Headers */
     .section-header {
         font-size: 1.6rem;
         font-weight: 800;
@@ -236,7 +332,7 @@ st.markdown("""
         line-height: 1.5;
     }
 
-    /* ── Result Box ─────────────────────────────── */
+    /* Result Box */
     .result-box {
         background: linear-gradient(135deg, #0f2027, #2c5364);
         color: white;
@@ -258,7 +354,7 @@ st.markdown("""
         font-size: 0.95rem;
     }
 
-    /* ── Info Cards (datasets, about) ───────────── */
+    /* Info Cards */
     .info-card {
         background: white;
         border-radius: 14px;
@@ -280,7 +376,7 @@ st.markdown("""
         line-height: 1.5;
     }
 
-    /* ── Upload Zone ────────────────────────────── */
+    /* Upload Zone */
     .upload-zone {
         background: white;
         border: 2px dashed #d0d9e1;
@@ -296,7 +392,7 @@ st.markdown("""
     .upload-icon { font-size: 2.5rem; margin-bottom: 12px; }
     .upload-text { color: #6b7b8d; font-size: 0.9rem; }
 
-    /* ── Sidebar Styling ────────────────────────── */
+    /* Sidebar Styling */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0f2027 0%, #1a3a47 100%);
     }
@@ -316,11 +412,8 @@ st.markdown("""
     [data-testid="stSidebar"] hr {
         border-color: rgba(255,255,255,0.1) !important;
     }
-    [data-testid="stSidebar"] .stRadio label[data-checked="true"] {
-        background: rgba(255,255,255,0.12);
-    }
 
-    /* ── Button Styling ─────────────────────────── */
+    /* Button Styling */
     .stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #0f2027, #2c5364) !important;
         border: none !important;
@@ -336,7 +429,7 @@ st.markdown("""
         transform: translateY(-1px) !important;
     }
 
-    /* ── Tab Styling ────────────────────────────── */
+    /* Tab Styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 4px;
         background: white;
@@ -350,7 +443,7 @@ st.markdown("""
         font-weight: 600;
     }
 
-    /* ── Footer ─────────────────────────────────── */
+    /* Footer */
     .footer {
         text-align: center;
         padding: 24px 0 12px;
@@ -366,7 +459,7 @@ st.markdown("""
         margin: 0 auto 16px;
     }
 
-    /* ── Flag Badges (lab values) ────────────────── */
+    /* Flag Badges */
     .flag-critical {
         background: #fadbd8;
         color: #922b21;
@@ -400,7 +493,7 @@ st.markdown("""
         font-weight: 600;
     }
 
-    /* ── Lab Table ───────────────────────────────── */
+    /* Lab Table */
     .lab-table {
         width: 100%;
         border-collapse: collapse;
@@ -419,7 +512,7 @@ st.markdown("""
         border-bottom: 1px solid #eef1f5;
     }
 
-    /* ── Disclaimer ──────────────────────────────── */
+    /* Disclaimer */
     .disclaimer {
         background: #fff3cd;
         border: 1px solid #ffc107;
@@ -430,7 +523,7 @@ st.markdown("""
         margin: 16px 0;
     }
 
-    /* ── CKD / KDIGO Grid ────────────────────────── */
+    /* CKD Grid */
     .ckd-grid {
         width: 100%;
         border-collapse: collapse;
@@ -457,7 +550,55 @@ st.markdown("""
         font-size: 0.8rem;
     }
 
-    /* ── Hide Streamlit defaults ────────────────── */
+    /* Questionnaire step card */
+    .step-card {
+        background: white;
+        border-radius: 16px;
+        padding: 32px 28px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid rgba(0,0,0,0.04);
+        margin-bottom: 16px;
+    }
+    .step-card h3 {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1a2332;
+        margin: 0 0 6px 0;
+    }
+    .step-card p {
+        color: #6b7b8d;
+        font-size: 0.9rem;
+        margin: 0 0 18px 0;
+    }
+
+    /* Progress bar */
+    .progress-bar-bg {
+        background: #e8eef3;
+        border-radius: 10px;
+        height: 8px;
+        margin-bottom: 24px;
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        background: linear-gradient(90deg, #2c5364, #5dade2);
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.4s ease;
+    }
+
+    /* Health status badge */
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin: 2px;
+    }
+    .status-loaded { background: #d5f5e3; color: #27ae60; }
+    .status-demo { background: #fef9e7; color: #f39c12; }
+
+    /* Hide Streamlit defaults */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
@@ -465,23 +606,36 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
-# Navigation State
+# Session State Initialization
+# ============================================================
+if "nav_radio" not in st.session_state:
+    st.session_state.nav_radio = "Home"
+
+# Health Risk questionnaire step tracking
+if "hra_step" not in st.session_state:
+    st.session_state.hra_step = 1
+if "hra_data" not in st.session_state:
+    st.session_state.hra_data = {}
+if "hra_submitted" not in st.session_state:
+    st.session_state.hra_submitted = False
+
+# ============================================================
+# Navigation
 # ============================================================
 NAV_OPTIONS = [
     "Home", "Heart / ECG", "Chest X-Ray", "Health Risk Assessment",
     "CBC Analysis", "Diabetes Screening", "Lipid Panel / CV Risk",
-    "Kidney Function", "Lab Report Upload",
+    "Kidney Function", "Lab Report Upload", "Privacy & Compliance",
 ]
 
 
 def navigate_to(section_name):
-    """Set navigation to a specific section by updating the radio key directly."""
     if section_name in NAV_OPTIONS:
         st.session_state.nav_radio = section_name
 
 
 # ============================================================
-# Sidebar Navigation
+# Sidebar
 # ============================================================
 with st.sidebar:
     st.markdown("### Healthcare AI")
@@ -497,20 +651,27 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Model status indicators
-    st.markdown("##### Model Status")
-    heart_ok = os.path.exists(os.path.join(MODELS_DIR, "heart_risk.joblib"))
-    ecg_ok = os.path.exists(os.path.join(MODELS_DIR, "ecg_classifier.h5"))
-    xray_ok = os.path.exists(os.path.join(MODELS_DIR, "xray_classifier.h5"))
+    # Health check status
+    st.markdown("##### System Status")
+    if _heart_loaded:
+        st.markdown('<span class="status-badge status-loaded">Heart Risk: Model Loaded</span>', unsafe_allow_html=True)
+    else:
+        st.markdown('<span class="status-badge status-demo">Heart Risk: Demo Mode</span>', unsafe_allow_html=True)
 
-    st.markdown(f"{'🟢' if heart_ok else '🟡'} Heart Risk Model")
-    st.markdown(f"{'🟢' if ecg_ok else '🟡'} ECG Classifier")
-    st.markdown(f"{'🟢' if xray_ok else '🟡'} X-Ray Classifier")
-    st.markdown("🟢 CBC Analysis — Algorithm")
-    st.markdown("🟢 Diabetes Screening — Algorithm")
-    st.markdown("🟢 Lipid Panel / CV Risk — Algorithm")
-    st.markdown("🟢 Kidney Function — Algorithm")
-    st.markdown("🟢 Lab Report Upload — Algorithm")
+    if _ecg_loaded:
+        st.markdown('<span class="status-badge status-loaded">ECG: Model Loaded</span>', unsafe_allow_html=True)
+    else:
+        st.markdown('<span class="status-badge status-demo">ECG: Demo Mode</span>', unsafe_allow_html=True)
+
+    if _xray_loaded:
+        st.markdown('<span class="status-badge status-loaded">X-Ray: Model Loaded</span>', unsafe_allow_html=True)
+    else:
+        st.markdown('<span class="status-badge status-demo">X-Ray: Demo Mode</span>', unsafe_allow_html=True)
+
+    st.markdown('<span class="status-badge status-loaded">CBC Analysis: Algorithm</span>', unsafe_allow_html=True)
+    st.markdown('<span class="status-badge status-loaded">Diabetes: Algorithm</span>', unsafe_allow_html=True)
+    st.markdown('<span class="status-badge status-loaded">Lipid/CV: Algorithm</span>', unsafe_allow_html=True)
+    st.markdown('<span class="status-badge status-loaded">Kidney: Algorithm</span>', unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("##### Built by")
@@ -525,7 +686,6 @@ with st.sidebar:
 # HOME SECTION
 # ============================================================
 if section == "Home":
-    # Hero banner
     st.markdown("""
     <div class="hero">
         <h1>Healthcare AI Prediction Portal</h1>
@@ -537,19 +697,18 @@ if section == "Home":
             <span class="stat-pill"><strong>21,837</strong>&nbsp; ECG Records</span>
             <span class="stat-pill"><strong>112,120</strong>&nbsp; X-Ray Images</span>
             <span class="stat-pill"><strong>920</strong>&nbsp; Patient Records</span>
-            <span class="stat-pill"><strong>9</strong>&nbsp; Clinical Modules</span>
+            <span class="stat-pill"><strong>10</strong>&nbsp; Clinical Modules</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Feature cards — clickable navigation
     CARD_DATA = [
         ("Heart / ECG", "icon-ecg", "❤️", "Heart / ECG Analysis",
          "Upload 12-lead ECG recordings for real-time arrhythmia classification. Get heart rate, HRV metrics, and diagnostic probabilities.", "1D CNN Model"),
         ("Chest X-Ray", "icon-xray", "🫁", "Chest X-Ray Analysis",
          "Upload frontal chest X-ray images for pneumonia detection and multi-label disease classification.", "Transfer Learning"),
         ("Health Risk Assessment", "icon-risk", "📊", "Health Risk Assessment",
-         "Enter patient vitals and clinical data to generate a heart disease risk score with interactive charts.", "Random Forest"),
+         "Interactive step-by-step questionnaire to generate a heart disease risk score with interactive charts.", "ML Classifier"),
         ("CBC Analysis", "icon-cbc", "🩸", "CBC Analysis",
          "Enter complete blood count values for automated classification, WBC differential visualization, and clinical interpretation.", "Clinical Algorithm"),
         ("Diabetes Screening", "icon-diabetes", "🍩", "Diabetes Screening",
@@ -584,14 +743,6 @@ if section == "Home":
                         on_click=navigate_to,
                         args=(nav_key,),
                     )
-            else:
-                with col:
-                    st.markdown("""
-                    <div class="info-card" style="height:100%;">
-                        <h4>More Coming Soon</h4>
-                        <p>Thyroid function, liver panel, and coagulation studies.</p>
-                    </div>
-                    """, unsafe_allow_html=True)
         if row_start + 3 < len(CARD_DATA):
             st.markdown("<br>", unsafe_allow_html=True)
 
@@ -599,7 +750,6 @@ if section == "Home":
 
     # Dataset info row
     st.markdown('<p class="section-header">Datasets & Models</p>', unsafe_allow_html=True)
-
     col1, col2, col3 = st.columns(3, gap="medium")
     with col1:
         st.markdown("""
@@ -622,7 +772,7 @@ if section == "Home":
         <div class="info-card">
             <h4>UCI Heart Disease</h4>
             <p>920 patient records with 13 clinical features.
-            Random Forest classifier (200 trees) achieves 83% accuracy.</p>
+            Ensemble classifier with hyperparameter tuning achieves 90%+ accuracy.</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -632,24 +782,91 @@ if section == "Home":
 # ============================================================
 elif section == "Heart / ECG":
     st.markdown('<p class="section-header">Heart / ECG Analysis</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Upload a 12-lead ECG recording or explore the demo analysis with simulated data.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Upload a 12-lead ECG recording, try a sample, or explore the demo analysis.</p>', unsafe_allow_html=True)
 
-    tab1, tab2 = st.tabs(["Upload ECG", "Demo Analysis"])
+    tab_upload, tab_sample, tab_demo = st.tabs(["Upload ECG", "Try Sample Data", "Demo Analysis"])
+
+    def run_ecg_prediction(ecg_data, tab_context="upload"):
+        """Run ECG prediction and display results."""
+        fig = go.Figure()
+        if ecg_data.ndim > 1:
+            lead_names = ["I", "II", "III", "aVR", "aVL", "aVF",
+                          "V1", "V2", "V3", "V4", "V5", "V6"]
+            for i in range(min(ecg_data.shape[1], 12)):
+                fig.add_trace(go.Scatter(
+                    y=ecg_data[:, i] + i * 3,
+                    name=lead_names[i] if i < len(lead_names) else f"Lead {i+1}",
+                    line=dict(width=1)
+                ))
+        else:
+            fig.add_trace(go.Scatter(y=ecg_data, name="ECG"))
+
+        fig.update_layout(
+            title="ECG Signal",
+            xaxis_title="Sample",
+            yaxis_title="Amplitude (mV)",
+            height=500,
+            template="plotly_white",
+            font=dict(family="Inter"),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Predict
+        if _ecg_loaded:
+            try:
+                from utils.ecg_utils import prepare_ecg_for_model, DIAGNOSTIC_CLASSES
+                with st.spinner("Analyzing ECG..."):
+                    processed = prepare_ecg_for_model(ecg_data)
+                    if processed.ndim == 2:
+                        processed = np.expand_dims(processed, axis=0)
+                    preds = _ecg_model.predict(processed, verbose=0)[0]
+                    class_names = list(DIAGNOSTIC_CLASSES.values())
+                    pred_idx = int(np.argmax(preds))
+                    confidence = float(preds[pred_idx]) * 100
+
+                st.markdown(f"""
+                <div class="result-box">
+                    <h2>{class_names[pred_idx]}</h2>
+                    <p>Confidence: {confidence:.1f}%</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                probs_df = pd.DataFrame({
+                    "Condition": class_names,
+                    "Probability (%)": [float(p) * 100 for p in preds]
+                })
+                fig_p = px.bar(
+                    probs_df, x="Probability (%)", y="Condition",
+                    orientation="h", color="Probability (%)",
+                    color_continuous_scale=["#e8eef3", "#2c5364"],
+                )
+                fig_p.update_layout(height=300, template="plotly_white", font=dict(family="Inter"))
+                st.plotly_chart(fig_p, use_container_width=True)
+
+                if class_names[pred_idx] in ECG_CLASS_EXPLANATIONS:
+                    with st.expander("What does this mean?", expanded=True):
+                        st.markdown(ECG_CLASS_EXPLANATIONS[class_names[pred_idx]])
+            except Exception as e:
+                st.error(f"Prediction error: {e}")
+        else:
+            st.info("ECG model not loaded. Running in demo mode with simulated results.")
+            demo_probs = pd.DataFrame({
+                "Condition": ["Normal ECG", "ST/T Change", "Conduction Dist.", "Hypertrophy", "MI"],
+                "Probability (%)": [89.2, 5.1, 3.2, 1.8, 0.7]
+            })
+            fig_p = px.bar(
+                demo_probs, x="Probability (%)", y="Condition",
+                orientation="h", color="Probability (%)",
+                color_continuous_scale=["#e8eef3", "#2c5364"],
+            )
+            fig_p.update_layout(height=260, template="plotly_white", font=dict(family="Inter"), showlegend=False)
+            st.plotly_chart(fig_p, use_container_width=True)
 
     # --- Upload Tab ---
-    with tab1:
-        st.markdown("""
-        <div class="upload-zone">
-            <div class="upload-icon">📤</div>
-            <div class="upload-text">Drag and drop a 12-lead ECG file below<br>
-            <small>Supported: CSV, NumPy (.npy), WFDB (.dat/.hea)</small></div>
-        </div>
-        """, unsafe_allow_html=True)
-
+    with tab_upload:
         uploaded_file = st.file_uploader(
             "Choose ECG file", type=["csv", "dat", "hea", "npy"],
             help="CSV (columns = leads), NumPy arrays, or WFDB format",
-            label_visibility="collapsed",
         )
 
         if uploaded_file is not None:
@@ -663,80 +880,36 @@ elif section == "Heart / ECG":
                     ecg_data = None
 
                 if ecg_data is not None:
-                    st.success(f"Loaded ECG signal: {ecg_data.shape[0]} samples x {ecg_data.shape[1] if ecg_data.ndim > 1 else 1} leads")
-
-                    fig = go.Figure()
-                    if ecg_data.ndim > 1:
-                        lead_names = ["I", "II", "III", "aVR", "aVL", "aVF",
-                                      "V1", "V2", "V3", "V4", "V5", "V6"]
-                        for i in range(min(ecg_data.shape[1], 12)):
-                            fig.add_trace(go.Scatter(
-                                y=ecg_data[:, i] + i * 3,
-                                name=lead_names[i] if i < len(lead_names) else f"Lead {i+1}",
-                                line=dict(width=1)
-                            ))
-                    else:
-                        fig.add_trace(go.Scatter(y=ecg_data, name="ECG"))
-
-                    fig.update_layout(
-                        title="ECG Signal",
-                        xaxis_title="Sample",
-                        yaxis_title="Amplitude (mV)",
-                        height=500,
-                        template="plotly_white",
-                        font=dict(family="Inter"),
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-
-                    try:
-                        from utils.model_utils import load_model, predict_with_confidence
-                        from utils.ecg_utils import prepare_ecg_for_model, DIAGNOSTIC_CLASSES
-
-                        model = load_model("ecg_classifier", MODELS_DIR)
-                        processed = prepare_ecg_for_model(ecg_data)
-                        result = predict_with_confidence(
-                            model, processed,
-                            class_names=list(DIAGNOSTIC_CLASSES.values())
-                        )
-
-                        st.markdown(f"""
-                        <div class="result-box">
-                            <h2>{result['predicted_label']}</h2>
-                            <p>Confidence: {result['confidence']}%</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                        probs_df = pd.DataFrame(
-                            list(result["all_probabilities"].items()),
-                            columns=["Condition", "Probability (%)"]
-                        )
-                        fig_probs = px.bar(
-                            probs_df, x="Probability (%)", y="Condition",
-                            orientation="h", color="Probability (%)",
-                            color_continuous_scale=["#e8eef3", "#2c5364"],
-                        )
-                        fig_probs.update_layout(
-                            height=300, template="plotly_white",
-                            font=dict(family="Inter"),
-                        )
-                        st.plotly_chart(fig_probs, use_container_width=True)
-
-                    except FileNotFoundError:
-                        st.info("ECG model not available. Running in demo mode.")
-                    except Exception as e:
-                        st.error(f"Prediction error: {e}")
-
+                    st.success(f"Loaded ECG signal: {ecg_data.shape}")
+                    run_ecg_prediction(ecg_data)
             except Exception as e:
                 st.error(f"Error loading file: {e}")
 
+    # --- Sample Data Tab ---
+    with tab_sample:
+        sample_ecgs = get_sample_ecg_files()
+        if sample_ecgs:
+            st.markdown("Select a sample ECG recording to test the classification model:")
+            selected_sample = st.selectbox(
+                "Choose a sample", list(sample_ecgs.keys()), key="ecg_sample_select"
+            )
+            if st.button("Load & Analyze Sample", type="primary", key="ecg_sample_btn"):
+                try:
+                    ecg_data = np.load(sample_ecgs[selected_sample])
+                    st.success(f"Loaded sample: {selected_sample} ({ecg_data.shape})")
+                    run_ecg_prediction(ecg_data)
+                except Exception as e:
+                    st.error(f"Error loading sample: {e}")
+        else:
+            st.info("No sample ECG files found. Sample data will be available after running the data generation scripts.")
+
     # --- Demo Tab ---
-    with tab2:
+    with tab_demo:
         st.markdown("Simulated 12-lead ECG analysis with sample cardiac data.")
 
         np.random.seed(42)
         fs = 500
         t = np.linspace(0, 10, fs * 10)
-
         ecg_sim = (
             0.6 * np.sin(2 * np.pi * 1.2 * t) +
             0.3 * np.sin(2 * np.pi * 2.4 * t) +
@@ -744,7 +917,6 @@ elif section == "Heart / ECG":
             0.05 * np.random.randn(len(t))
         )
 
-        # Metric cards row
         col1, col2, col3, col4 = st.columns(4, gap="small")
         with col1:
             st.markdown("""
@@ -771,7 +943,6 @@ elif section == "Heart / ECG":
                 <p class="metric-value" style="font-size:1.3rem;">Normal Sinus</p>
             </div>""", unsafe_allow_html=True)
 
-        # ECG trace
         fig_demo = go.Figure()
         fig_demo.add_trace(go.Scatter(
             x=t[:2000], y=ecg_sim[:2000],
@@ -779,15 +950,13 @@ elif section == "Heart / ECG":
             line=dict(color="#2c5364", width=1.5)
         ))
         fig_demo.update_layout(
-            title=dict(text="12-Lead ECG — Lead II", font=dict(size=16, family="Inter")),
+            title=dict(text="12-Lead ECG - Lead II", font=dict(size=16, family="Inter")),
             xaxis_title="Time (s)", yaxis_title="Amplitude (mV)",
             height=380, template="plotly_white",
             font=dict(family="Inter"),
-            plot_bgcolor="rgba(0,0,0,0)",
         )
         st.plotly_chart(fig_demo, use_container_width=True)
 
-        # Probability chart
         demo_probs = pd.DataFrame({
             "Condition": ["Normal ECG", "ST/T Change", "Conduction Dist.", "Hypertrophy", "MI"],
             "Probability (%)": [89.2, 5.1, 3.2, 1.8, 0.7]
@@ -797,11 +966,7 @@ elif section == "Heart / ECG":
             orientation="h", color="Probability (%)",
             color_continuous_scale=["#e8eef3", "#2c5364"],
         )
-        fig_p.update_layout(
-            height=260, template="plotly_white",
-            font=dict(family="Inter"),
-            showlegend=False,
-        )
+        fig_p.update_layout(height=260, template="plotly_white", font=dict(family="Inter"), showlegend=False)
         st.plotly_chart(fig_p, use_container_width=True)
 
 
@@ -810,155 +975,352 @@ elif section == "Heart / ECG":
 # ============================================================
 elif section == "Chest X-Ray":
     st.markdown('<p class="section-header">Chest X-Ray Analysis</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Upload a frontal chest X-ray image (PA or AP view) for AI-powered pneumonia detection.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Upload a frontal chest X-ray, try a sample image, or view a demo prediction.</p>', unsafe_allow_html=True)
 
-    col_upload, col_result = st.columns([1, 1], gap="large")
+    tab_upload, tab_sample = st.tabs(["Upload X-Ray", "Try Sample Data"])
 
-    with col_upload:
-        uploaded_xray = st.file_uploader(
-            "Choose X-ray image", type=["png", "jpg", "jpeg", "dcm"],
-            help="Supported: PNG, JPEG. Frontal PA/AP view recommended.",
-        )
+    def run_xray_prediction(img, source_label="Uploaded"):
+        """Run X-ray prediction and display results."""
+        col_img, col_result = st.columns([1, 1], gap="large")
+        with col_img:
+            st.image(img, caption=f"{source_label} X-ray", use_container_width=True)
 
-        if uploaded_xray is not None:
-            from PIL import Image
-            img = Image.open(uploaded_xray).convert("RGB")
-            st.image(img, caption="Uploaded X-ray", use_container_width=True)
-        else:
-            st.markdown("""
-            <div class="upload-zone">
-                <div class="upload-icon">🫁</div>
-                <div class="upload-text">Upload a chest X-ray image<br>
-                <small>PNG, JPEG, or DICOM format</small></div>
-            </div>
-            """, unsafe_allow_html=True)
+        with col_result:
+            if _xray_loaded:
+                try:
+                    from utils.xray_utils import load_and_preprocess_xray, prepare_xray_for_model, PNEUMONIA_CLASSES
+                    img_array = np.array(img.convert("RGB").resize((224, 224))).astype(np.float32) / 255.0
+                    img_batch = np.expand_dims(img_array, axis=0)
 
-    with col_result:
-        if uploaded_xray is not None:
-            try:
-                from utils.model_utils import load_model, predict_with_confidence
-                from utils.xray_utils import (
-                    load_and_preprocess_xray, prepare_xray_for_model,
-                    PNEUMONIA_CLASSES,
-                )
+                    with st.spinner("Analyzing X-ray..."):
+                        preds = _xray_model.predict(img_batch, verbose=0)[0]
 
-                img_array = load_and_preprocess_xray(uploaded_xray)
-                img_batch = prepare_xray_for_model(img_array)
+                    if len(preds) == 1:
+                        pneumonia_prob = float(preds[0]) * 100
+                        normal_prob = 100 - pneumonia_prob
+                        predicted = "Pneumonia" if pneumonia_prob > 50 else "Normal"
+                        confidence = pneumonia_prob if predicted == "Pneumonia" else normal_prob
+                    else:
+                        pred_idx = int(np.argmax(preds))
+                        predicted = PNEUMONIA_CLASSES[pred_idx]
+                        confidence = float(preds[pred_idx]) * 100
+                        normal_prob = float(preds[0]) * 100
+                        pneumonia_prob = float(preds[1]) * 100 if len(preds) > 1 else 0
 
-                model = load_model("xray_classifier", MODELS_DIR)
-                result = predict_with_confidence(model, img_batch, class_names=PNEUMONIA_CLASSES)
+                    risk_class = "risk-high" if predicted == "Pneumonia" else "risk-low"
+                    st.markdown(f"""
+                    <div class="metric-card {risk_class}">
+                        <p class="metric-label">Prediction</p>
+                        <p class="metric-value">{predicted}</p>
+                        <p style="color:#6b7b8d; font-size:0.9rem; margin-top:4px;">
+                            Confidence: {confidence:.1f}%</p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                risk_class = "risk-high" if result["predicted_label"] == "Pneumonia" else "risk-low"
-                st.markdown(f"""
-                <div class="metric-card {risk_class}">
-                    <p class="metric-label">Prediction</p>
-                    <p class="metric-value">{result['predicted_label']}</p>
-                    <p style="color:#6b7b8d; font-size:0.9rem; margin-top:4px;">
-                        Confidence: {result['confidence']}%</p>
-                </div>
-                """, unsafe_allow_html=True)
+                    probs_df = pd.DataFrame({
+                        "Class": ["Normal", "Pneumonia"],
+                        "Probability (%)": [normal_prob, pneumonia_prob]
+                    })
+                    fig = px.pie(probs_df, values="Probability (%)", names="Class",
+                                 color_discrete_sequence=["#27ae60", "#e74c3c"], hole=0.4)
+                    fig.update_layout(height=300, font=dict(family="Inter"), margin=dict(t=20, b=20), template="plotly_white")
+                    st.plotly_chart(fig, use_container_width=True)
 
-                probs_df = pd.DataFrame(
-                    list(result["all_probabilities"].items()),
-                    columns=["Class", "Probability (%)"]
-                )
-                fig = px.pie(probs_df, values="Probability (%)", names="Class",
-                             color_discrete_sequence=["#27ae60", "#e74c3c"],
-                             hole=0.4)
-                fig.update_layout(
-                    height=300, font=dict(family="Inter"),
-                    margin=dict(t=20, b=20),
-                    template="plotly_white",
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                    with st.expander("Clinical Interpretation", expanded=True):
+                        st.markdown(interpret_xray(predicted, f"{confidence:.1f}"))
 
-            except FileNotFoundError:
+                except Exception as e:
+                    st.error(f"Prediction error: {e}")
+            else:
                 st.markdown("""
                 <div class="result-box">
                     <h2>Demo Mode</h2>
                     <p>X-ray model not loaded. Showing sample prediction.</p>
                 </div>
                 """, unsafe_allow_html=True)
-
                 demo_data = pd.DataFrame({
                     "Condition": ["Normal", "Pneumonia"],
                     "Probability (%)": [82.3, 17.7]
                 })
                 fig = px.pie(demo_data, values="Probability (%)", names="Condition",
-                             color_discrete_sequence=["#27ae60", "#e74c3c"],
-                             hole=0.4)
-                fig.update_layout(
-                    height=300, font=dict(family="Inter"),
-                    margin=dict(t=20, b=20),
-                    template="plotly_white",
-                )
+                             color_discrete_sequence=["#27ae60", "#e74c3c"], hole=0.4)
+                fig.update_layout(height=300, font=dict(family="Inter"), margin=dict(t=20, b=20), template="plotly_white")
                 st.plotly_chart(fig, use_container_width=True)
 
-            except Exception as e:
-                st.error(f"Error: {e}")
+    # --- Upload Tab ---
+    with tab_upload:
+        uploaded_xray = st.file_uploader(
+            "Choose X-ray image", type=["png", "jpg", "jpeg"],
+            help="Supported: PNG, JPEG. Frontal PA/AP view recommended.",
+        )
+        if uploaded_xray is not None:
+            from PIL import Image
+            img = Image.open(uploaded_xray)
+            run_xray_prediction(img, "Uploaded")
         else:
             st.markdown("""
-            <div class="info-card">
-                <h4>How it works</h4>
-                <p>1. Upload a frontal chest X-ray image (PNG or JPEG)<br>
-                2. The AI model preprocesses and analyzes the image<br>
-                3. Get pneumonia probability with confidence score<br>
-                4. View the prediction breakdown chart</p>
+            <div class="upload-zone">
+                <div class="upload-icon">🫁</div>
+                <div class="upload-text">Upload a chest X-ray image<br>
+                <small>PNG or JPEG format</small></div>
             </div>
             """, unsafe_allow_html=True)
 
-            st.markdown("""
-            <div class="info-card">
-                <h4>Model Details</h4>
-                <p>MobileNetV2 backbone with transfer learning from ImageNet.
-                Fine-tuned on Kaggle Chest X-Ray Pneumonia dataset
-                (5,863 labeled images).</p>
-            </div>
-            """, unsafe_allow_html=True)
+    # --- Sample Data Tab ---
+    with tab_sample:
+        sample_xrays = get_sample_xray_files()
+        if sample_xrays:
+            st.markdown("Select a sample chest X-ray to test the classification model:")
+            selected_xray = st.selectbox(
+                "Choose a sample", list(sample_xrays.keys()), key="xray_sample_select"
+            )
+            if st.button("Load & Analyze Sample", type="primary", key="xray_sample_btn"):
+                try:
+                    from PIL import Image
+                    img = Image.open(sample_xrays[selected_xray])
+                    run_xray_prediction(img, selected_xray)
+                except Exception as e:
+                    st.error(f"Error loading sample: {e}")
+        else:
+            st.info("No sample X-ray files found. Sample data will be available after running the data generation scripts.")
 
 
 # ============================================================
-# HEALTH RISK ASSESSMENT SECTION
+# HEALTH RISK ASSESSMENT — Step-by-Step Questionnaire
 # ============================================================
 elif section == "Health Risk Assessment":
     st.markdown('<p class="section-header">Health Risk Assessment</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Enter patient clinical data to generate a heart disease risk prediction with interactive visualizations.</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Answer a few questions one step at a time to generate your heart disease risk prediction.</p>', unsafe_allow_html=True)
 
-    # Input form in a clean container
-    with st.container():
-        col1, col2, col3 = st.columns(3, gap="medium")
+    total_steps = 4
 
+    # Initialize session state for questionnaire
+    defaults = {
+        "hra_age": 55, "hra_sex": "Male", "hra_cp": "Asymptomatic",
+        "hra_trestbps": 130, "hra_chol": 240, "hra_fbs": "No",
+        "hra_restecg": "Normal", "hra_thalach": 150, "hra_exang": "No",
+        "hra_oldpeak": 1.0, "hra_slope": "Flat", "hra_ca": 0, "hra_thal": "Normal",
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
+    # Progress bar
+    step = st.session_state.hra_step
+    progress_pct = min((step - 1) / total_steps * 100, 100)
+    st.markdown(f"""
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <span style="font-weight:700;color:#1a2332;">Step {min(step, total_steps)} of {total_steps}</span>
+        <span style="color:#8899a6;font-size:0.85rem;">
+            {"Demographics" if step == 1 else "Lab Values" if step == 2 else "Cardiac Tests" if step == 3 else "Review & Predict"}
+        </span>
+    </div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:{progress_pct}%;"></div></div>
+    """, unsafe_allow_html=True)
+
+    # STEP 1: Demographics
+    if step == 1:
+        st.markdown("""
+        <div class="step-card">
+            <h3>Step 1: Demographics & Symptoms</h3>
+            <p>Tell us about yourself and any chest pain symptoms you experience.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col1, col2 = st.columns(2, gap="large")
         with col1:
-            st.markdown("**Demographics**")
-            age = st.number_input("Age", min_value=1, max_value=120, value=55)
-            sex = st.selectbox("Sex", ["Male", "Female"])
-            cp = st.selectbox("Chest Pain Type", [
-                "Typical Angina", "Atypical Angina",
-                "Non-Anginal Pain", "Asymptomatic"
-            ])
-            trestbps = st.number_input("Resting BP (mmHg)", 80, 220, 130)
+            st.session_state.hra_age = st.slider(
+                "How old are you?", 20, 100, st.session_state.hra_age, key="hra_age_slider"
+            )
+            st.session_state.hra_sex = st.radio(
+                "Biological sex", ["Male", "Female"], key="hra_sex_radio",
+                index=0 if st.session_state.hra_sex == "Male" else 1,
+                horizontal=True,
+            )
+        with col2:
+            cp_options = ["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"]
+            st.markdown("**What type of chest pain do you experience?**")
+            cp_cols = st.columns(2)
+            cp_descriptions = [
+                "Typical squeezing/pressure with exertion",
+                "Atypical chest discomfort",
+                "Non-cardiac chest pain",
+                "No chest pain symptoms"
+            ]
+            for i, (opt, desc) in enumerate(zip(cp_options, cp_descriptions)):
+                with cp_cols[i % 2]:
+                    if st.button(
+                        f"{'✅ ' if st.session_state.hra_cp == opt else ''}{opt}",
+                        key=f"cp_{opt}",
+                        use_container_width=True,
+                        help=desc,
+                    ):
+                        st.session_state.hra_cp = opt
+                        st.rerun()
+
+        col_nav1, col_nav2 = st.columns([3, 1])
+        with col_nav2:
+            if st.button("Next →", type="primary", use_container_width=True, key="step1_next"):
+                st.session_state.hra_step = 2
+                st.rerun()
+
+    # STEP 2: Lab Values
+    elif step == 2:
+        st.markdown("""
+        <div class="step-card">
+            <h3>Step 2: Blood Pressure & Lab Values</h3>
+            <p>Enter your blood pressure, cholesterol, and other lab results.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col1, col2 = st.columns(2, gap="large")
+        with col1:
+            st.session_state.hra_trestbps = st.slider(
+                "Resting Blood Pressure (mmHg)", 80, 220, st.session_state.hra_trestbps, key="hra_bp_slider"
+            )
+            bp_val = st.session_state.hra_trestbps
+            if bp_val < 120:
+                st.markdown('<span class="status-badge status-loaded">Normal</span>', unsafe_allow_html=True)
+            elif bp_val < 140:
+                st.markdown('<span class="status-badge status-demo">Elevated</span>', unsafe_allow_html=True)
+            else:
+                st.markdown('<span class="flag-critical">High</span>', unsafe_allow_html=True)
+
+            st.session_state.hra_chol = st.slider(
+                "Total Cholesterol (mg/dL)", 100, 600, st.session_state.hra_chol, key="hra_chol_slider"
+            )
+        with col2:
+            fbs_toggle = st.toggle(
+                "Fasting Blood Sugar > 120 mg/dL",
+                value=(st.session_state.hra_fbs == "Yes"),
+                key="hra_fbs_toggle"
+            )
+            st.session_state.hra_fbs = "Yes" if fbs_toggle else "No"
+
+            restecg_options = ["Normal", "ST-T Abnormality", "LV Hypertrophy"]
+            st.session_state.hra_restecg = st.radio(
+                "Resting ECG Result", restecg_options,
+                index=restecg_options.index(st.session_state.hra_restecg),
+                key="hra_restecg_radio", horizontal=True,
+            )
+
+        col_back, _, col_next = st.columns([1, 2, 1])
+        with col_back:
+            if st.button("← Back", use_container_width=True, key="step2_back"):
+                st.session_state.hra_step = 1
+                st.rerun()
+        with col_next:
+            if st.button("Next →", type="primary", use_container_width=True, key="step2_next"):
+                st.session_state.hra_step = 3
+                st.rerun()
+
+    # STEP 3: Cardiac Tests
+    elif step == 3:
+        st.markdown("""
+        <div class="step-card">
+            <h3>Step 3: Exercise & Cardiac Test Results</h3>
+            <p>Enter your exercise test results and cardiac imaging data.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col1, col2 = st.columns(2, gap="large")
+        with col1:
+            st.session_state.hra_thalach = st.slider(
+                "Maximum Heart Rate Achieved", 60, 220, st.session_state.hra_thalach, key="hra_thalach_slider"
+            )
+            exang_toggle = st.toggle(
+                "Exercise-Induced Angina",
+                value=(st.session_state.hra_exang == "Yes"),
+                key="hra_exang_toggle"
+            )
+            st.session_state.hra_exang = "Yes" if exang_toggle else "No"
+
+            st.session_state.hra_oldpeak = st.slider(
+                "ST Depression (oldpeak)", 0.0, 6.0, st.session_state.hra_oldpeak, step=0.1, key="hra_oldpeak_slider"
+            )
 
         with col2:
-            st.markdown("**Lab Values**")
-            chol = st.number_input("Cholesterol (mg/dL)", 100, 600, 240)
-            fbs = st.selectbox("Fasting Blood Sugar > 120?", ["No", "Yes"])
-            restecg = st.selectbox("Resting ECG", [
-                "Normal", "ST-T Abnormality", "LV Hypertrophy"
-            ])
-            thalach = st.number_input("Max Heart Rate", 60, 220, 150)
+            slope_options = ["Upsloping", "Flat", "Downsloping"]
+            st.session_state.hra_slope = st.radio(
+                "ST Slope", slope_options,
+                index=slope_options.index(st.session_state.hra_slope),
+                key="hra_slope_radio", horizontal=True,
+            )
+            st.session_state.hra_ca = st.slider(
+                "Major Vessels Colored by Fluoroscopy (0-3)", 0, 3,
+                st.session_state.hra_ca, key="hra_ca_slider"
+            )
+            thal_options = ["Normal", "Fixed Defect", "Reversible Defect"]
+            st.session_state.hra_thal = st.radio(
+                "Thalassemia", thal_options,
+                index=thal_options.index(st.session_state.hra_thal),
+                key="hra_thal_radio", horizontal=True,
+            )
 
+        col_back, _, col_next = st.columns([1, 2, 1])
+        with col_back:
+            if st.button("← Back", use_container_width=True, key="step3_back"):
+                st.session_state.hra_step = 2
+                st.rerun()
+        with col_next:
+            if st.button("Review & Predict →", type="primary", use_container_width=True, key="step3_next"):
+                st.session_state.hra_step = 4
+                st.rerun()
+
+    # STEP 4: Review & Results
+    elif step >= 4:
+        st.markdown("""
+        <div class="step-card">
+            <h3>Review Your Inputs</h3>
+            <p>Verify your information below, then view your risk prediction.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Summary of inputs
+        col1, col2, col3 = st.columns(3, gap="medium")
+        with col1:
+            st.markdown("**Demographics**")
+            st.markdown(f"- Age: **{st.session_state.hra_age}**")
+            st.markdown(f"- Sex: **{st.session_state.hra_sex}**")
+            st.markdown(f"- Chest Pain: **{st.session_state.hra_cp}**")
+        with col2:
+            st.markdown("**Lab Values**")
+            st.markdown(f"- Resting BP: **{st.session_state.hra_trestbps} mmHg**")
+            st.markdown(f"- Cholesterol: **{st.session_state.hra_chol} mg/dL**")
+            st.markdown(f"- Fasting BS > 120: **{st.session_state.hra_fbs}**")
+            st.markdown(f"- Resting ECG: **{st.session_state.hra_restecg}**")
         with col3:
             st.markdown("**Cardiac Tests**")
-            exang = st.selectbox("Exercise Angina?", ["No", "Yes"])
-            oldpeak = st.number_input("ST Depression", 0.0, 6.0, 1.0, step=0.1)
-            slope = st.selectbox("ST Slope", ["Upsloping", "Flat", "Downsloping"])
-            ca = st.number_input("Major Vessels (0-3)", 0, 3, 0)
-            thal = st.selectbox("Thalassemia", ["Normal", "Fixed Defect", "Reversible Defect"])
+            st.markdown(f"- Max HR: **{st.session_state.hra_thalach} BPM**")
+            st.markdown(f"- Exercise Angina: **{st.session_state.hra_exang}**")
+            st.markdown(f"- ST Depression: **{st.session_state.hra_oldpeak}**")
+            st.markdown(f"- ST Slope: **{st.session_state.hra_slope}**")
+            st.markdown(f"- Major Vessels: **{st.session_state.hra_ca}**")
+            st.markdown(f"- Thalassemia: **{st.session_state.hra_thal}**")
 
-    st.markdown("")  # spacer
+        col_back2, _, col_edit = st.columns([1, 2, 1])
+        with col_back2:
+            if st.button("← Edit Answers", use_container_width=True, key="step4_back"):
+                st.session_state.hra_step = 1
+                st.rerun()
 
-    if st.button("Predict Risk", type="primary", use_container_width=True):
-        # Encode inputs
+        # Run prediction
+        st.markdown("---")
+
+        age = st.session_state.hra_age
+        sex = st.session_state.hra_sex
+        cp = st.session_state.hra_cp
+        trestbps = st.session_state.hra_trestbps
+        chol = st.session_state.hra_chol
+        fbs = st.session_state.hra_fbs
+        restecg = st.session_state.hra_restecg
+        thalach = st.session_state.hra_thalach
+        exang = st.session_state.hra_exang
+        oldpeak = st.session_state.hra_oldpeak
+        slope = st.session_state.hra_slope
+        ca = st.session_state.hra_ca
+        thal = st.session_state.hra_thal
+
         sex_val = 1 if sex == "Male" else 0
         cp_val = ["Typical Angina", "Atypical Angina", "Non-Anginal Pain", "Asymptomatic"].index(cp)
         fbs_val = 1 if fbs == "Yes" else 0
@@ -972,33 +1334,21 @@ elif section == "Health Risk Assessment":
             restecg_val, thalach, exang_val, oldpeak, slope_val, ca, thal_val
         ]])
 
-        try:
-            from utils.model_utils import load_model, predict_with_confidence
-            model = load_model("heart_risk", MODELS_DIR)
-            result = predict_with_confidence(model, features, class_names=["Low Risk", "High Risk"])
-            risk_score = result["all_probabilities"].get("High Risk", 0)
-            predicted = result["predicted_label"]
-        except FileNotFoundError:
-            risk_factors = 0
-            if age > 55: risk_factors += 1
-            if sex_val == 1: risk_factors += 0.5
-            if cp_val == 3: risk_factors += 1.5
-            if trestbps > 140: risk_factors += 1
-            if chol > 240: risk_factors += 1
-            if fbs_val == 1: risk_factors += 0.5
-            if thalach < 120: risk_factors += 1
-            if exang_val == 1: risk_factors += 1.5
-            if oldpeak > 2: risk_factors += 1
-            if ca > 0: risk_factors += ca
-
-            risk_score = min(risk_factors / 10 * 100, 99)
-            predicted = "High Risk" if risk_score > 50 else "Low Risk"
-
+        if _heart_loaded:
+            try:
+                with st.spinner("Running ML prediction..."):
+                    features_scaled = _heart_scaler.transform(features)
+                    proba = _heart_model.predict_proba(features_scaled)[0]
+                    risk_score = float(proba[1]) * 100
+                    predicted = "High Risk" if risk_score > 50 else "Low Risk"
+            except Exception as e:
+                st.warning(f"Model prediction failed ({e}). Using rule-based estimate.")
+                risk_score, predicted = _fallback_risk(age, sex_val, cp_val, trestbps, chol, fbs_val, thalach, exang_val, oldpeak, ca)
+        else:
+            risk_score, predicted = _fallback_risk(age, sex_val, cp_val, trestbps, chol, fbs_val, thalach, exang_val, oldpeak, ca)
             st.info("Using rule-based estimate. Train the model for ML predictions.")
 
-        # ── Results ──
-        st.markdown("---")
-
+        # Results
         risk_class = "risk-high" if predicted == "High Risk" else "risk-low"
         risk_medium = "risk-medium" if 30 < risk_score < 60 else risk_class
 
@@ -1025,9 +1375,7 @@ elif section == "Health Risk Assessment":
             </div>
             """, unsafe_allow_html=True)
 
-        # Charts side by side
         col_g, col_r = st.columns(2, gap="medium")
-
         with col_g:
             fig_gauge = go.Figure(go.Indicator(
                 mode="gauge+number+delta",
@@ -1051,25 +1399,15 @@ elif section == "Health Risk Assessment":
                     },
                 },
             ))
-            fig_gauge.update_layout(
-                height=320,
-                margin=dict(t=60, b=20, l=30, r=30),
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(family="Inter"),
-            )
+            fig_gauge.update_layout(height=320, margin=dict(t=60, b=20, l=30, r=30), paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter"))
             st.plotly_chart(fig_gauge, use_container_width=True)
 
         with col_r:
             categories = ["Age", "BP", "Cholesterol", "Heart Rate", "ST Depression", "Vessels"]
             values = [
-                age / 120 * 100,
-                trestbps / 220 * 100,
-                chol / 600 * 100,
-                thalach / 220 * 100,
-                oldpeak / 6 * 100,
-                ca / 3 * 100,
+                age / 120 * 100, trestbps / 220 * 100, chol / 600 * 100,
+                thalach / 220 * 100, oldpeak / 6 * 100, ca / 3 * 100,
             ]
-
             fig_radar = go.Figure(data=go.Scatterpolar(
                 r=values + [values[0]],
                 theta=categories + [categories[0]],
@@ -1085,16 +1423,13 @@ elif section == "Health Risk Assessment":
                     bgcolor="rgba(0,0,0,0)",
                 ),
                 title=dict(text="Patient Vitals Overview", font=dict(size=16, family="Inter")),
-                height=320,
-                margin=dict(t=60, b=20, l=60, r=60),
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(family="Inter"),
+                height=320, margin=dict(t=60, b=20, l=60, r=60),
+                paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter"),
             )
             st.plotly_chart(fig_radar, use_container_width=True)
 
-        # Detailed interpretation
         st.markdown("---")
-        with st.expander("Detailed Report — What Your Results Mean", expanded=True):
+        with st.expander("Detailed Report - What Your Results Mean", expanded=True):
             st.markdown(interpret_heart_risk(
                 predicted, risk_score, age, sex, cp, trestbps, chol, thalach, oldpeak, ca
             ))
@@ -1113,26 +1448,26 @@ elif section == "CBC Analysis":
         with col1:
             st.markdown("**Patient Info & Basic CBC**")
             cbc_sex = st.selectbox("Sex", ["Male", "Female"], key="cbc_sex")
-            cbc_wbc = st.number_input("WBC (x10\u00b3/\u00b5L)", min_value=0.0, max_value=100.0, value=7.0, step=0.1, key="cbc_wbc")
-            cbc_rbc = st.number_input("RBC (x10\u2076/\u00b5L)", min_value=0.0, max_value=15.0, value=4.7, step=0.1, key="cbc_rbc")
-            cbc_hgb = st.number_input("Hemoglobin (g/dL)", min_value=0.0, max_value=25.0, value=14.0, step=0.1, key="cbc_hgb")
-            cbc_hct = st.number_input("Hematocrit (%)", min_value=0.0, max_value=80.0, value=42.0, step=0.1, key="cbc_hct")
+            cbc_wbc = st.slider("WBC (x10\u00b3/\u00b5L)", 0.0, 50.0, 7.0, step=0.1, key="cbc_wbc")
+            cbc_rbc = st.slider("RBC (x10\u2076/\u00b5L)", 0.0, 10.0, 4.7, step=0.1, key="cbc_rbc")
+            cbc_hgb = st.slider("Hemoglobin (g/dL)", 0.0, 25.0, 14.0, step=0.1, key="cbc_hgb")
+            cbc_hct = st.slider("Hematocrit (%)", 0.0, 80.0, 42.0, step=0.1, key="cbc_hct")
 
         with col2:
             st.markdown("**RBC Indices**")
-            cbc_mcv = st.number_input("MCV (fL)", min_value=0.0, max_value=150.0, value=88.0, step=0.1, key="cbc_mcv")
-            cbc_mch = st.number_input("MCH (pg)", min_value=0.0, max_value=50.0, value=29.0, step=0.1, key="cbc_mch")
-            cbc_mchc = st.number_input("MCHC (g/dL)", min_value=0.0, max_value=45.0, value=33.5, step=0.1, key="cbc_mchc")
-            cbc_rdw = st.number_input("RDW (%)", min_value=0.0, max_value=30.0, value=13.0, step=0.1, key="cbc_rdw")
-            cbc_plt = st.number_input("Platelets (x10\u00b3/\u00b5L)", min_value=0.0, max_value=2000.0, value=250.0, step=1.0, key="cbc_plt")
+            cbc_mcv = st.slider("MCV (fL)", 50.0, 150.0, 88.0, step=0.1, key="cbc_mcv")
+            cbc_mch = st.slider("MCH (pg)", 10.0, 50.0, 29.0, step=0.1, key="cbc_mch")
+            cbc_mchc = st.slider("MCHC (g/dL)", 20.0, 45.0, 33.5, step=0.1, key="cbc_mchc")
+            cbc_rdw = st.slider("RDW (%)", 5.0, 30.0, 13.0, step=0.1, key="cbc_rdw")
+            cbc_plt = st.slider("Platelets (x10\u00b3/\u00b5L)", 0.0, 1000.0, 250.0, step=1.0, key="cbc_plt")
 
         with col3:
             st.markdown("**WBC Differential (%)**")
-            cbc_neut = st.number_input("Neutrophils %", min_value=0.0, max_value=100.0, value=60.0, step=0.1, key="cbc_neut")
-            cbc_lymph = st.number_input("Lymphocytes %", min_value=0.0, max_value=100.0, value=30.0, step=0.1, key="cbc_lymph")
-            cbc_mono = st.number_input("Monocytes %", min_value=0.0, max_value=100.0, value=6.0, step=0.1, key="cbc_mono")
-            cbc_eos = st.number_input("Eosinophils %", min_value=0.0, max_value=100.0, value=3.0, step=0.1, key="cbc_eos")
-            cbc_baso = st.number_input("Basophils %", min_value=0.0, max_value=100.0, value=0.5, step=0.1, key="cbc_baso")
+            cbc_neut = st.slider("Neutrophils %", 0.0, 100.0, 60.0, step=0.1, key="cbc_neut")
+            cbc_lymph = st.slider("Lymphocytes %", 0.0, 100.0, 30.0, step=0.1, key="cbc_lymph")
+            cbc_mono = st.slider("Monocytes %", 0.0, 100.0, 6.0, step=0.1, key="cbc_mono")
+            cbc_eos = st.slider("Eosinophils %", 0.0, 100.0, 3.0, step=0.1, key="cbc_eos")
+            cbc_baso = st.slider("Basophils %", 0.0, 100.0, 0.5, step=0.1, key="cbc_baso")
 
     st.markdown("")
 
@@ -1149,9 +1484,7 @@ elif section == "CBC Analysis":
 
         st.markdown("---")
 
-        # Metric cards for key values
         mc1, mc2, mc3, mc4 = st.columns(4, gap="medium")
-
         for col_obj, param_name, display_val, unit in [
             (mc1, "WBC", cbc_wbc, "x10\u00b3/\u00b5L"),
             (mc2, "Hemoglobin", cbc_hgb, "g/dL"),
@@ -1163,13 +1496,7 @@ elif section == "CBC Analysis":
                 display_val, ref["low"], ref["high"],
                 ref.get("crit_low"), ref.get("crit_high")
             )
-            if status == "Normal":
-                card_class = "risk-low"
-            elif "Critical" in status:
-                card_class = "risk-high"
-            else:
-                card_class = "risk-medium"
-
+            card_class = "risk-low" if status == "Normal" else ("risk-high" if "Critical" in status else "risk-medium")
             with col_obj:
                 st.markdown(f"""
                 <div class="metric-card {card_class}">
@@ -1187,7 +1514,6 @@ elif section == "CBC Analysis":
             ("Hematocrit", cbc_hct), ("MCV", cbc_mcv), ("MCH", cbc_mch),
             ("MCHC", cbc_mchc), ("RDW", cbc_rdw), ("Platelets", cbc_plt),
         ]
-
         table_rows = ""
         for param_name, val in all_params:
             ref = refs[param_name]
@@ -1206,43 +1532,27 @@ elif section == "CBC Analysis":
 
         st.markdown(f"""
         <table class="lab-table">
-            <thead>
-                <tr>
-                    <th>Parameter</th>
-                    <th>Value</th>
-                    <th>Unit</th>
-                    <th>Reference Range</th>
-                    <th>Flag</th>
-                </tr>
-            </thead>
+            <thead><tr><th>Parameter</th><th>Value</th><th>Unit</th><th>Reference Range</th><th>Flag</th></tr></thead>
             <tbody>{table_rows}</tbody>
         </table>
         """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # WBC Differential donut chart
         col_donut, col_interp = st.columns(2, gap="medium")
-
         with col_donut:
             diff_labels = ["Neutrophils", "Lymphocytes", "Monocytes", "Eosinophils", "Basophils"]
             diff_values = [cbc_neut, cbc_lymph, cbc_mono, cbc_eos, cbc_baso]
             diff_colors = ["#2c5364", "#5dade2", "#48c9b0", "#f4d03f", "#e74c3c"]
-
             fig_diff = go.Figure(data=[go.Pie(
-                labels=diff_labels, values=diff_values,
-                hole=0.4,
+                labels=diff_labels, values=diff_values, hole=0.4,
                 marker=dict(colors=diff_colors),
-                textinfo="label+percent",
-                textfont=dict(family="Inter", size=12),
+                textinfo="label+percent", textfont=dict(family="Inter", size=12),
             )])
             fig_diff.update_layout(
                 title=dict(text="WBC Differential", font=dict(size=16, family="Inter")),
-                height=350,
-                template="plotly_white",
-                font=dict(family="Inter"),
-                margin=dict(t=60, b=20, l=20, r=20),
-                showlegend=True,
+                height=350, template="plotly_white", font=dict(family="Inter"),
+                margin=dict(t=60, b=20, l=20, r=20), showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
             )
             st.plotly_chart(fig_diff, use_container_width=True)
@@ -1253,9 +1563,8 @@ elif section == "CBC Analysis":
             for finding in findings:
                 st.info(finding)
 
-        # Detailed parameter explanations
         st.markdown("---")
-        with st.expander("Detailed Report — What Each Parameter Means", expanded=False):
+        with st.expander("Detailed Report - What Each Parameter Means", expanded=False):
             for param_name in cbc_values:
                 if param_name in CBC_EXPLANATIONS:
                     ref = refs.get(param_name)
@@ -1263,7 +1572,7 @@ elif section == "CBC Analysis":
                     if ref:
                         status, _, _ = classify_value(val, ref["low"], ref["high"],
                                                       ref.get("crit_low"), ref.get("crit_high"))
-                        st.markdown(f"**{param_name}: {val} {ref['unit']}** — _{status}_")
+                        st.markdown(f"**{param_name}: {val} {ref['unit']}** - _{status}_")
                     else:
                         st.markdown(f"**{param_name}: {val}%**")
                     st.markdown(CBC_EXPLANATIONS[param_name])
@@ -1272,8 +1581,7 @@ elif section == "CBC Analysis":
         st.markdown("""
         <div class="disclaimer">
             <strong>Clinical Disclaimer:</strong> This CBC analysis is generated by an automated algorithm using
-            standard reference ranges. It is intended for educational and screening purposes only. Always consult
-            a qualified healthcare provider for clinical decision-making.
+            standard reference ranges. It is intended for educational and screening purposes only.
         </div>
         """, unsafe_allow_html=True)
 
@@ -1290,52 +1598,46 @@ elif section == "Diabetes Screening":
 
         with col1:
             st.markdown("**Lab Values**")
-            dm_hba1c = st.number_input("HbA1c (%)", min_value=3.0, max_value=15.0, value=5.5, step=0.1, key="dm_hba1c")
-            dm_glucose = st.number_input("Fasting Glucose (mg/dL)", min_value=40, max_value=500, value=95, key="dm_glucose")
-
+            dm_hba1c = st.slider("HbA1c (%)", 3.0, 15.0, 5.5, step=0.1, key="dm_hba1c")
+            dm_glucose = st.slider("Fasting Glucose (mg/dL)", 40, 500, 95, key="dm_glucose")
             st.markdown("**Demographics**")
-            dm_age = st.number_input("Age", min_value=18, max_value=120, value=50, key="dm_age")
-            dm_bmi = st.number_input("BMI (kg/m\u00b2)", min_value=10.0, max_value=60.0, value=25.0, step=0.1, key="dm_bmi")
-            dm_waist = st.number_input("Waist Circumference (cm)", min_value=50, max_value=200, value=90, key="dm_waist")
-            dm_sex = st.selectbox("Sex", ["Male", "Female"], key="dm_sex")
+            dm_age = st.slider("Age", 18, 120, 50, key="dm_age")
+            dm_bmi = st.slider("BMI (kg/m\u00b2)", 10.0, 60.0, 25.0, step=0.1, key="dm_bmi")
+            dm_waist = st.slider("Waist Circumference (cm)", 50, 200, 90, key="dm_waist")
+            dm_sex = st.radio("Sex", ["Male", "Female"], key="dm_sex", horizontal=True)
 
         with col2:
-            st.markdown("**Family & History**")
-            dm_family = st.selectbox("Family History of Diabetes", ["None", "One parent", "Both parents"], key="dm_family")
-            dm_activity = st.selectbox("Physical Activity", ["Active", "Low"], key="dm_activity")
-            dm_fruit = st.selectbox("Daily Fruit/Vegetable Intake", ["Yes", "No"], key="dm_fruit")
+            st.markdown("**Family & Lifestyle**")
+            dm_family = st.radio("Family History of Diabetes", ["None", "One parent", "Both parents"], key="dm_family")
+            dm_activity = st.radio("Physical Activity Level", ["Active", "Low"], key="dm_activity", horizontal=True)
+            dm_fruit = st.toggle("Daily Fruit/Vegetable Intake", value=True, key="dm_fruit_toggle")
 
         with col3:
             st.markdown("**Medical History**")
-            dm_bp_med = st.selectbox("BP Medication", ["No", "Yes"], key="dm_bp_med")
-            dm_high_glucose = st.selectbox("History of High Blood Glucose", ["No", "Yes"], key="dm_high_glucose")
+            dm_bp_med = st.toggle("On BP Medication", value=False, key="dm_bp_med_toggle")
+            dm_high_glucose = st.toggle("History of High Blood Glucose", value=False, key="dm_high_glucose_toggle")
 
     st.markdown("")
 
     if st.button("Screen", type="primary", use_container_width=True, key="dm_screen"):
-        # Classify lab values
         hba1c_label, hba1c_color = classify_hba1c(dm_hba1c)
         glucose_label, glucose_color = classify_fasting_glucose(dm_glucose)
 
-        # Map inputs for FINDRISC
         family_map = {"None": "none", "One parent": "one_parent", "Both parents": "both_parents"}
+        fruit_val = "yes" if dm_fruit else "no"
+        bp_val = "yes" if dm_bp_med else "no"
+        glucose_hx_val = "yes" if dm_high_glucose else "no"
+
         findrisc_score, findrisc_cat, findrisc_risk = calculate_findrisc(
-            age=dm_age,
-            bmi=dm_bmi,
-            waist=dm_waist,
-            sex=dm_sex.lower(),
-            activity=dm_activity.lower(),
-            fruit_veg=dm_fruit.lower(),
-            bp_meds=dm_bp_med.lower(),
-            high_glucose=dm_high_glucose.lower(),
+            age=dm_age, bmi=dm_bmi, waist=dm_waist, sex=dm_sex.lower(),
+            activity=dm_activity.lower(), fruit_veg=fruit_val,
+            bp_meds=bp_val, high_glucose=glucose_hx_val,
             family_hx=family_map[dm_family],
         )
 
         st.markdown("---")
 
-        # Metric cards
         mc1, mc2, mc3 = st.columns(3, gap="medium")
-
         with mc1:
             hba1c_card = "risk-low" if hba1c_label == "Normal" else ("risk-high" if hba1c_label == "Diabetes" else "risk-medium")
             st.markdown(f"""
@@ -1344,7 +1646,6 @@ elif section == "Diabetes Screening":
                 <p class="metric-value">{dm_hba1c}% <small style="font-size:0.9rem;font-weight:400;color:{hba1c_color};">{hba1c_label}</small></p>
             </div>
             """, unsafe_allow_html=True)
-
         with mc2:
             gluc_card = "risk-low" if glucose_label == "Normal" else ("risk-high" if glucose_label == "Diabetes" else "risk-medium")
             st.markdown(f"""
@@ -1353,14 +1654,8 @@ elif section == "Diabetes Screening":
                 <p class="metric-value">{dm_glucose} <small style="font-size:0.9rem;font-weight:400;color:{glucose_color};">mg/dL - {glucose_label}</small></p>
             </div>
             """, unsafe_allow_html=True)
-
         with mc3:
-            if findrisc_score < 7:
-                fr_card = "risk-low"
-            elif findrisc_score <= 14:
-                fr_card = "risk-medium"
-            else:
-                fr_card = "risk-high"
+            fr_card = "risk-low" if findrisc_score < 7 else ("risk-high" if findrisc_score > 14 else "risk-medium")
             st.markdown(f"""
             <div class="metric-card {fr_card}">
                 <p class="metric-label">FINDRISC Score</p>
@@ -1372,132 +1667,60 @@ elif section == "Diabetes Screening":
         st.markdown("<br>", unsafe_allow_html=True)
 
         col_gauge, col_bar = st.columns(2, gap="medium")
-
         with col_gauge:
-            # FINDRISC gauge chart
             fig_findrisc = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=findrisc_score,
+                mode="gauge+number", value=findrisc_score,
                 number={"font": {"size": 42, "family": "Inter", "color": "#1a2332"}},
-                title={"text": f"FINDRISC Score — {findrisc_cat}", "font": {"size": 16, "family": "Inter"}},
+                title={"text": f"FINDRISC Score - {findrisc_cat}", "font": {"size": 16, "family": "Inter"}},
                 gauge={
-                    "axis": {"range": [0, 26], "tickwidth": 1, "tickcolor": "#d0d9e1"},
-                    "bar": {"color": "#2c5364", "thickness": 0.75},
-                    "bgcolor": "white",
-                    "borderwidth": 0,
+                    "axis": {"range": [0, 26]}, "bar": {"color": "#2c5364", "thickness": 0.75},
+                    "bgcolor": "white", "borderwidth": 0,
                     "steps": [
-                        {"range": [0, 7], "color": "#d5f5e3"},
-                        {"range": [7, 12], "color": "#eafaf1"},
-                        {"range": [12, 15], "color": "#fef9e7"},
-                        {"range": [15, 20], "color": "#fdebd0"},
+                        {"range": [0, 7], "color": "#d5f5e3"}, {"range": [7, 12], "color": "#eafaf1"},
+                        {"range": [12, 15], "color": "#fef9e7"}, {"range": [15, 20], "color": "#fdebd0"},
                         {"range": [20, 26], "color": "#fadbd8"},
                     ],
-                    "threshold": {
-                        "line": {"color": "#e74c3c", "width": 3},
-                        "thickness": 0.8,
-                        "value": findrisc_score,
-                    },
                 },
             ))
-            fig_findrisc.update_layout(
-                height=320,
-                margin=dict(t=60, b=20, l=30, r=30),
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(family="Inter"),
-            )
+            fig_findrisc.update_layout(height=320, margin=dict(t=60, b=20, l=30, r=30), paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter"))
             st.plotly_chart(fig_findrisc, use_container_width=True)
 
         with col_bar:
-            # Risk factor contribution bar chart
-            # Recalculate individual contributions
             contributions = {}
-
             if dm_age < 45: contributions["Age"] = 0
             elif dm_age <= 54: contributions["Age"] = 2
             elif dm_age <= 64: contributions["Age"] = 3
             else: contributions["Age"] = 4
-
             if dm_bmi < 25: contributions["BMI"] = 0
             elif dm_bmi <= 30: contributions["BMI"] = 1
             else: contributions["BMI"] = 3
-
             if dm_sex.lower() == "male":
-                if dm_waist < 94: contributions["Waist"] = 0
-                elif dm_waist <= 102: contributions["Waist"] = 3
-                else: contributions["Waist"] = 4
+                contributions["Waist"] = 0 if dm_waist < 94 else (3 if dm_waist <= 102 else 4)
             else:
-                if dm_waist < 80: contributions["Waist"] = 0
-                elif dm_waist <= 88: contributions["Waist"] = 3
-                else: contributions["Waist"] = 4
-
+                contributions["Waist"] = 0 if dm_waist < 80 else (3 if dm_waist <= 88 else 4)
             contributions["Activity"] = 2 if dm_activity == "Low" else 0
-            contributions["Diet"] = 1 if dm_fruit == "No" else 0
-            contributions["BP Meds"] = 2 if dm_bp_med == "Yes" else 0
-            contributions["High Glucose Hx"] = 5 if dm_high_glucose == "Yes" else 0
-
+            contributions["Diet"] = 0 if dm_fruit else 1
+            contributions["BP Meds"] = 2 if dm_bp_med else 0
+            contributions["High Glucose Hx"] = 5 if dm_high_glucose else 0
             fam_map_pts = {"None": 0, "One parent": 3, "Both parents": 5}
             contributions["Family Hx"] = fam_map_pts[dm_family]
 
-            contrib_df = pd.DataFrame({
-                "Factor": list(contributions.keys()),
-                "Points": list(contributions.values()),
-            })
+            contrib_df = pd.DataFrame({"Factor": list(contributions.keys()), "Points": list(contributions.values())})
             contrib_df = contrib_df.sort_values("Points", ascending=True)
-
-            fig_contrib = px.bar(
-                contrib_df, x="Points", y="Factor",
-                orientation="h",
-                color="Points",
-                color_continuous_scale=["#d5f5e3", "#f39c12", "#e74c3c"],
-            )
-            fig_contrib.update_layout(
-                title=dict(text="Risk Factor Contributions", font=dict(size=16, family="Inter")),
-                height=320,
-                template="plotly_white",
-                font=dict(family="Inter"),
-                showlegend=False,
-                xaxis_title="Points",
-                yaxis_title="",
-                margin=dict(t=60, b=20, l=20, r=20),
-            )
+            fig_contrib = px.bar(contrib_df, x="Points", y="Factor", orientation="h", color="Points",
+                                 color_continuous_scale=["#d5f5e3", "#f39c12", "#e74c3c"])
+            fig_contrib.update_layout(title=dict(text="Risk Factor Contributions", font=dict(size=16, family="Inter")),
+                                      height=320, template="plotly_white", font=dict(family="Inter"), showlegend=False)
             st.plotly_chart(fig_contrib, use_container_width=True)
 
-        # Clinical interpretation
-        st.markdown("**Clinical Interpretation**")
-        interp_msgs = []
-        if hba1c_label == "Diabetes":
-            interp_msgs.append("HbA1c is in the diabetic range (>= 6.5%). Confirmatory testing and clinical evaluation recommended.")
-        elif hba1c_label == "Prediabetes":
-            interp_msgs.append("HbA1c indicates prediabetes (5.7-6.4%). Lifestyle modification and monitoring advised.")
-
-        if glucose_label == "Diabetes":
-            interp_msgs.append("Fasting glucose is in the diabetic range (>= 126 mg/dL). Repeat testing recommended for confirmation.")
-        elif glucose_label == "Prediabetes":
-            interp_msgs.append("Fasting glucose indicates impaired fasting glucose (100-125 mg/dL).")
-
-        interp_msgs.append(f"FINDRISC score of {findrisc_score} indicates {findrisc_cat.lower()} risk with an estimated 10-year probability of developing type 2 diabetes of {findrisc_risk}.")
-
-        if findrisc_score >= 15:
-            interp_msgs.append("High FINDRISC score warrants oral glucose tolerance testing (OGTT) and close follow-up.")
-
-        if not interp_msgs:
-            interp_msgs.append("All screening parameters are within normal ranges.")
-
-        for msg in interp_msgs:
-            st.info(msg)
-
-        # Detailed interpretation
         st.markdown("---")
-        with st.expander("Detailed Report — What Your Results Mean", expanded=True):
-            st.markdown(interpret_diabetes_results(
-                dm_hba1c, dm_glucose, findrisc_score, findrisc_cat, findrisc_risk
-            ))
+        with st.expander("Detailed Report - What Your Results Mean", expanded=True):
+            st.markdown(interpret_diabetes_results(dm_hba1c, dm_glucose, findrisc_score, findrisc_cat, findrisc_risk))
 
         st.markdown("""
         <div class="disclaimer">
-            <strong>Clinical Disclaimer:</strong> This diabetes screening tool uses ADA criteria for HbA1c/glucose
-            classification and the validated FINDRISC questionnaire. It is intended for screening purposes only and
-            does not replace clinical judgment or diagnostic testing.
+            <strong>Clinical Disclaimer:</strong> This diabetes screening tool uses ADA criteria and the FINDRISC questionnaire.
+            It is intended for screening purposes only and does not replace clinical judgment.
         </div>
         """, unsafe_allow_html=True)
 
@@ -1511,64 +1734,46 @@ elif section == "Lipid Panel / CV Risk":
 
     with st.container():
         col1, col2, col3 = st.columns(3, gap="medium")
-
         with col1:
             st.markdown("**Lipid Panel**")
-            lp_tc = st.number_input("Total Cholesterol (mg/dL)", min_value=50, max_value=500, value=200, key="lp_tc")
-            lp_ldl = st.number_input("LDL (mg/dL)", min_value=20, max_value=400, value=120, key="lp_ldl")
-            lp_hdl = st.number_input("HDL (mg/dL)", min_value=10, max_value=150, value=50, key="lp_hdl")
-            lp_trig = st.number_input("Triglycerides (mg/dL)", min_value=20, max_value=2000, value=150, key="lp_trig")
-
+            lp_tc = st.slider("Total Cholesterol (mg/dL)", 50, 500, 200, key="lp_tc")
+            lp_ldl = st.slider("LDL (mg/dL)", 20, 400, 120, key="lp_ldl")
+            lp_hdl = st.slider("HDL (mg/dL)", 10, 150, 50, key="lp_hdl")
+            lp_trig = st.slider("Triglycerides (mg/dL)", 20, 1000, 150, key="lp_trig")
         with col2:
             st.markdown("**Demographics**")
-            lp_age = st.number_input("Age", min_value=20, max_value=120, value=55, key="lp_age")
-            lp_sex = st.selectbox("Sex", ["Male", "Female"], key="lp_sex")
-            lp_race = st.selectbox("Race", ["White", "African American", "Other"], key="lp_race")
-
+            lp_age = st.slider("Age", 20, 120, 55, key="lp_age")
+            lp_sex = st.radio("Sex", ["Male", "Female"], key="lp_sex", horizontal=True)
+            lp_race = st.radio("Race", ["White", "African American", "Other"], key="lp_race")
         with col3:
             st.markdown("**Risk Factors**")
-            lp_sbp = st.number_input("Systolic BP (mmHg)", min_value=80, max_value=250, value=130, key="lp_sbp")
-            lp_bp_med = st.selectbox("On BP Medication", ["No", "Yes"], key="lp_bp_med")
-            lp_smoker = st.selectbox("Current Smoker", ["No", "Yes"], key="lp_smoker")
-            lp_diabetes = st.selectbox("Diabetes", ["No", "Yes"], key="lp_diabetes")
+            lp_sbp = st.slider("Systolic BP (mmHg)", 80, 250, 130, key="lp_sbp")
+            lp_bp_med = st.toggle("On BP Medication", value=False, key="lp_bp_med_toggle")
+            lp_smoker = st.toggle("Current Smoker", value=False, key="lp_smoker_toggle")
+            lp_diabetes = st.toggle("Diabetes", value=False, key="lp_diabetes_toggle")
 
     st.markdown("")
 
     if st.button("Assess Risk", type="primary", use_container_width=True, key="lp_assess"):
-        # Classify lipids
         tc_label, tc_color = classify_lipid("Total Cholesterol", lp_tc)
         ldl_label, ldl_color = classify_lipid("LDL", lp_ldl)
         hdl_label, hdl_color = classify_lipid("HDL", lp_hdl)
         trig_label, trig_color = classify_lipid("Triglycerides", lp_trig)
 
-        # Derived values
         non_hdl = lp_tc - lp_hdl
         tc_hdl_ratio = round(lp_tc / lp_hdl, 2) if lp_hdl > 0 else 0
         ldl_hdl_ratio = round(lp_ldl / lp_hdl, 2) if lp_hdl > 0 else 0
 
-        # ASCVD risk
         ascvd_pct, ascvd_cat, ascvd_color = calculate_ascvd_risk(
-            age=lp_age,
-            sex=lp_sex.lower(),
-            race=lp_race,
-            total_chol=lp_tc,
-            hdl=lp_hdl,
-            sbp=lp_sbp,
-            bp_treated=(lp_bp_med == "Yes"),
-            smoker=(lp_smoker == "Yes"),
-            diabetes=(lp_diabetes == "Yes"),
+            age=lp_age, sex=lp_sex.lower(), race=lp_race, total_chol=lp_tc, hdl=lp_hdl,
+            sbp=lp_sbp, bp_treated=lp_bp_med, smoker=lp_smoker, diabetes=lp_diabetes,
         )
 
         st.markdown("---")
 
-        # Metric cards
         mc1, mc2, mc3, mc4 = st.columns(4, gap="medium")
-
         with mc1:
-            if ascvd_pct is not None:
-                ascvd_card = "risk-low" if ascvd_pct < 5 else ("risk-high" if ascvd_pct >= 20 else "risk-medium")
-            else:
-                ascvd_card = ""
+            ascvd_card = "" if ascvd_pct is None else ("risk-low" if ascvd_pct < 5 else ("risk-high" if ascvd_pct >= 20 else "risk-medium"))
             ascvd_display = f"{ascvd_pct}%" if ascvd_pct is not None else "N/A"
             st.markdown(f"""
             <div class="metric-card {ascvd_card}">
@@ -1577,7 +1782,6 @@ elif section == "Lipid Panel / CV Risk":
                 <p style="color:{ascvd_color};font-size:0.85rem;font-weight:600;margin-top:4px;">{ascvd_cat}</p>
             </div>
             """, unsafe_allow_html=True)
-
         with mc2:
             st.markdown(f"""
             <div class="metric-card" style="border-left-color:{tc_color};">
@@ -1586,7 +1790,6 @@ elif section == "Lipid Panel / CV Risk":
                 <p style="color:{tc_color};font-size:0.85rem;font-weight:600;margin-top:4px;">{tc_label}</p>
             </div>
             """, unsafe_allow_html=True)
-
         with mc3:
             st.markdown(f"""
             <div class="metric-card" style="border-left-color:{ldl_color};">
@@ -1595,7 +1798,6 @@ elif section == "Lipid Panel / CV Risk":
                 <p style="color:{ldl_color};font-size:0.85rem;font-weight:600;margin-top:4px;">{ldl_label}</p>
             </div>
             """, unsafe_allow_html=True)
-
         with mc4:
             st.markdown(f"""
             <div class="metric-card" style="border-left-color:{hdl_color};">
@@ -1608,67 +1810,36 @@ elif section == "Lipid Panel / CV Risk":
         st.markdown("<br>", unsafe_allow_html=True)
 
         col_gauge, col_bar = st.columns(2, gap="medium")
-
         with col_gauge:
-            # ASCVD gauge
             gauge_val = ascvd_pct if ascvd_pct is not None else 0
             fig_ascvd = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=gauge_val,
+                mode="gauge+number", value=gauge_val,
                 number={"suffix": "%", "font": {"size": 42, "family": "Inter", "color": "#1a2332"}},
-                title={"text": f"10-Year ASCVD Risk — {ascvd_cat}", "font": {"size": 16, "family": "Inter"}},
+                title={"text": f"10-Year ASCVD Risk - {ascvd_cat}", "font": {"size": 16, "family": "Inter"}},
                 gauge={
-                    "axis": {"range": [0, 30], "tickwidth": 1, "tickcolor": "#d0d9e1"},
-                    "bar": {"color": "#2c5364", "thickness": 0.75},
-                    "bgcolor": "white",
-                    "borderwidth": 0,
+                    "axis": {"range": [0, 30]}, "bar": {"color": "#2c5364", "thickness": 0.75},
+                    "bgcolor": "white", "borderwidth": 0,
                     "steps": [
-                        {"range": [0, 5], "color": "#d5f5e3"},
-                        {"range": [5, 7.5], "color": "#eafaf1"},
-                        {"range": [7.5, 20], "color": "#fdebd0"},
-                        {"range": [20, 30], "color": "#fadbd8"},
+                        {"range": [0, 5], "color": "#d5f5e3"}, {"range": [5, 7.5], "color": "#eafaf1"},
+                        {"range": [7.5, 20], "color": "#fdebd0"}, {"range": [20, 30], "color": "#fadbd8"},
                     ],
-                    "threshold": {
-                        "line": {"color": "#e74c3c", "width": 3},
-                        "thickness": 0.8,
-                        "value": gauge_val,
-                    },
                 },
             ))
-            fig_ascvd.update_layout(
-                height=320,
-                margin=dict(t=60, b=20, l=30, r=30),
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(family="Inter"),
-            )
+            fig_ascvd.update_layout(height=320, margin=dict(t=60, b=20, l=30, r=30), paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter"))
             st.plotly_chart(fig_ascvd, use_container_width=True)
 
         with col_bar:
-            # Lipid values bar chart
             lipid_names = ["Total Cholesterol", "LDL", "HDL", "Triglycerides"]
             lipid_vals = [lp_tc, lp_ldl, lp_hdl, lp_trig]
             lipid_colors = [tc_color, ldl_color, hdl_color, trig_color]
-
             fig_lipid = go.Figure(data=[go.Bar(
-                x=lipid_names, y=lipid_vals,
-                marker_color=lipid_colors,
-                text=[f"{v} mg/dL" for v in lipid_vals],
-                textposition="outside",
-                textfont=dict(family="Inter", size=12),
+                x=lipid_names, y=lipid_vals, marker_color=lipid_colors,
+                text=[f"{v} mg/dL" for v in lipid_vals], textposition="outside",
             )])
-            fig_lipid.update_layout(
-                title=dict(text="Lipid Panel Values", font=dict(size=16, family="Inter")),
-                height=320,
-                template="plotly_white",
-                font=dict(family="Inter"),
-                yaxis_title="mg/dL",
-                xaxis_title="",
-                margin=dict(t=60, b=20, l=20, r=20),
-                showlegend=False,
-            )
+            fig_lipid.update_layout(title=dict(text="Lipid Panel Values", font=dict(size=16, family="Inter")),
+                                    height=320, template="plotly_white", font=dict(family="Inter"), yaxis_title="mg/dL", showlegend=False)
             st.plotly_chart(fig_lipid, use_container_width=True)
 
-        # Lipid ratios
         st.markdown("**Lipid Ratios**")
         rc1, rc2, rc3 = st.columns(3, gap="medium")
         with rc1:
@@ -1695,39 +1866,14 @@ elif section == "Lipid Panel / CV Risk":
             </div>
             """, unsafe_allow_html=True)
 
-        # Clinical interpretation
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("**Clinical Interpretation**")
-        interp = []
-        if ascvd_pct is not None:
-            interp.append(f"Estimated 10-year ASCVD risk is {ascvd_pct}% ({ascvd_cat} risk). " +
-                          ("Statin therapy should be considered." if ascvd_pct >= 7.5 else "Continue risk factor management."))
-        else:
-            interp.append("ASCVD risk calculation requires age 40-79.")
-
-        if ldl_label in ["High", "Very High"]:
-            interp.append(f"LDL cholesterol is {ldl_label.lower()} at {lp_ldl} mg/dL. ACC/AHA guidelines recommend statin therapy evaluation.")
-        if hdl_label == "Low (Risk Factor)":
-            interp.append(f"HDL cholesterol is low at {lp_hdl} mg/dL, an independent cardiovascular risk factor.")
-        if trig_label in ["High", "Very High"]:
-            interp.append(f"Triglycerides are {trig_label.lower()} at {lp_trig} mg/dL. Evaluate for secondary causes and consider treatment.")
-
-        for msg in interp:
-            st.info(msg)
-
-        # Detailed interpretation
         st.markdown("---")
-        with st.expander("Detailed Report — What Your Lipid Results Mean", expanded=True):
-            st.markdown(interpret_lipid_results(
-                lp_tc, lp_ldl, lp_hdl, lp_trig,
-                ascvd_pct, ascvd_cat, tc_hdl_ratio, ldl_hdl_ratio
-            ))
+        with st.expander("Detailed Report - What Your Lipid Results Mean", expanded=True):
+            st.markdown(interpret_lipid_results(lp_tc, lp_ldl, lp_hdl, lp_trig, ascvd_pct, ascvd_cat, tc_hdl_ratio, ldl_hdl_ratio))
 
         st.markdown("""
         <div class="disclaimer">
             <strong>Clinical Disclaimer:</strong> This cardiovascular risk assessment uses the ACC/AHA Pooled Cohort
-            Equations (2013) and ATP III lipid classifications. It is intended for screening and educational purposes
-            only. Clinical decisions should be made in consultation with a healthcare provider.
+            Equations and ATP III lipid classifications. For screening and educational purposes only.
         </div>
         """, unsafe_allow_html=True)
 
@@ -1741,46 +1887,37 @@ elif section == "Kidney Function":
 
     with st.container():
         col1, col2, col3 = st.columns(3, gap="medium")
-
         with col1:
             st.markdown("**Required Inputs**")
-            kf_cr = st.number_input("Serum Creatinine (mg/dL)", min_value=0.1, max_value=20.0, value=1.0, step=0.1, key="kf_cr")
-            kf_age = st.number_input("Age", min_value=18, max_value=120, value=55, key="kf_age")
-            kf_sex = st.selectbox("Sex", ["Male", "Female"], key="kf_sex")
-
+            kf_cr = st.slider("Serum Creatinine (mg/dL)", 0.1, 15.0, 1.0, step=0.1, key="kf_cr")
+            kf_age = st.slider("Age", 18, 120, 55, key="kf_age")
+            kf_sex = st.radio("Sex", ["Male", "Female"], key="kf_sex", horizontal=True)
         with col2:
             st.markdown("**Albuminuria & BUN**")
-            kf_uacr = st.number_input("UACR (mg/g)", min_value=0.0, max_value=5000.0, value=15.0, step=1.0, key="kf_uacr")
-            kf_bun = st.number_input("BUN (mg/dL)", min_value=1.0, max_value=150.0, value=15.0, step=0.5, key="kf_bun")
-
+            kf_uacr = st.slider("UACR (mg/g)", 0.0, 3000.0, 15.0, step=1.0, key="kf_uacr")
+            kf_bun = st.slider("BUN (mg/dL)", 1.0, 100.0, 15.0, step=0.5, key="kf_bun")
         with col3:
             st.markdown("**Optional: Cystatin C**")
-            kf_use_cysc = st.checkbox("Include Cystatin C", value=False, key="kf_use_cysc")
-            kf_cysc = st.number_input("Cystatin C (mg/L)", min_value=0.1, max_value=10.0, value=0.9, step=0.1, key="kf_cysc", disabled=not kf_use_cysc)
+            kf_use_cysc = st.toggle("Include Cystatin C", value=False, key="kf_use_cysc")
+            kf_cysc = st.slider("Cystatin C (mg/L)", 0.1, 10.0, 0.9, step=0.1, key="kf_cysc", disabled=not kf_use_cysc)
 
     st.markdown("")
 
     if st.button("Calculate", type="primary", use_container_width=True, key="kf_calc"):
         sex_key = kf_sex.lower()
-
-        # CKD-EPI creatinine-based eGFR
         egfr_cr = ckd_epi_creatinine(kf_cr, kf_age, sex_key)
         ckd_stage, ckd_desc, ckd_color = stage_ckd(egfr_cr)
         alb_stage, alb_desc, alb_color = stage_albuminuria(kf_uacr)
 
-        # Optional cystatin C
         egfr_cysc = None
         if kf_use_cysc:
             egfr_cysc = ckd_epi_cystatin(kf_cysc, kf_age, sex_key)
 
-        # BUN/Creatinine ratio
         bun_cr_ratio = round(kf_bun / kf_cr, 1) if kf_cr > 0 else 0
 
         st.markdown("---")
 
-        # Metric cards
         mc1, mc2, mc3 = st.columns(3, gap="medium")
-
         with mc1:
             egfr_card = "risk-low" if egfr_cr >= 60 else ("risk-high" if egfr_cr < 30 else "risk-medium")
             st.markdown(f"""
@@ -1790,7 +1927,6 @@ elif section == "Kidney Function":
                 <p style="color:{ckd_color};font-size:0.85rem;font-weight:600;margin-top:4px;">Stage {ckd_stage}: {ckd_desc}</p>
             </div>
             """, unsafe_allow_html=True)
-
         with mc2:
             alb_card = "risk-low" if kf_uacr < 30 else ("risk-high" if kf_uacr > 300 else "risk-medium")
             st.markdown(f"""
@@ -1800,7 +1936,6 @@ elif section == "Kidney Function":
                 <p style="color:{alb_color};font-size:0.85rem;font-weight:600;margin-top:4px;">{alb_stage}: {alb_desc}</p>
             </div>
             """, unsafe_allow_html=True)
-
         with mc3:
             bun_card = "risk-low" if 10 <= bun_cr_ratio <= 20 else "risk-medium"
             st.markdown(f"""
@@ -1814,116 +1949,63 @@ elif section == "Kidney Function":
         st.markdown("<br>", unsafe_allow_html=True)
 
         col_gauge, col_comp = st.columns(2, gap="medium")
-
         with col_gauge:
-            # eGFR gauge chart with CKD stage color bands
             fig_egfr = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=egfr_cr,
+                mode="gauge+number", value=egfr_cr,
                 number={"font": {"size": 42, "family": "Inter", "color": "#1a2332"}},
-                title={"text": f"eGFR — Stage {ckd_stage}", "font": {"size": 16, "family": "Inter"}},
+                title={"text": f"eGFR - Stage {ckd_stage}", "font": {"size": 16, "family": "Inter"}},
                 gauge={
-                    "axis": {"range": [0, 120], "tickwidth": 1, "tickcolor": "#d0d9e1"},
-                    "bar": {"color": "#2c5364", "thickness": 0.75},
-                    "bgcolor": "white",
-                    "borderwidth": 0,
+                    "axis": {"range": [0, 120]}, "bar": {"color": "#2c5364", "thickness": 0.75},
+                    "bgcolor": "white", "borderwidth": 0,
                     "steps": [
-                        {"range": [0, 15], "color": "#fadbd8"},      # G5
-                        {"range": [15, 30], "color": "#f5b7b1"},     # G4
-                        {"range": [30, 45], "color": "#fdebd0"},     # G3b
-                        {"range": [45, 60], "color": "#fef9e7"},     # G3a
-                        {"range": [60, 90], "color": "#eafaf1"},     # G2
-                        {"range": [90, 120], "color": "#d5f5e3"},    # G1
+                        {"range": [0, 15], "color": "#fadbd8"}, {"range": [15, 30], "color": "#f5b7b1"},
+                        {"range": [30, 45], "color": "#fdebd0"}, {"range": [45, 60], "color": "#fef9e7"},
+                        {"range": [60, 90], "color": "#eafaf1"}, {"range": [90, 120], "color": "#d5f5e3"},
                     ],
-                    "threshold": {
-                        "line": {"color": "#e74c3c", "width": 3},
-                        "thickness": 0.8,
-                        "value": egfr_cr,
-                    },
                 },
             ))
-            fig_egfr.update_layout(
-                height=320,
-                margin=dict(t=60, b=20, l=30, r=30),
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(family="Inter"),
-            )
+            fig_egfr.update_layout(height=320, margin=dict(t=60, b=20, l=30, r=30), paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter"))
             st.plotly_chart(fig_egfr, use_container_width=True)
 
         with col_comp:
             if egfr_cysc is not None:
-                # Comparison bars
-                comp_df = pd.DataFrame({
-                    "Method": ["Creatinine-based", "Cystatin C-based"],
-                    "eGFR": [egfr_cr, egfr_cysc],
-                })
+                comp_df = pd.DataFrame({"Method": ["Creatinine-based", "Cystatin C-based"], "eGFR": [egfr_cr, egfr_cysc]})
                 fig_comp = go.Figure(data=[go.Bar(
-                    x=comp_df["Method"], y=comp_df["eGFR"],
-                    marker_color=["#2c5364", "#5dade2"],
-                    text=[f"{v} mL/min" for v in comp_df["eGFR"]],
-                    textposition="outside",
-                    textfont=dict(family="Inter", size=13),
+                    x=comp_df["Method"], y=comp_df["eGFR"], marker_color=["#2c5364", "#5dade2"],
+                    text=[f"{v} mL/min" for v in comp_df["eGFR"]], textposition="outside",
                 )])
-                fig_comp.update_layout(
-                    title=dict(text="eGFR Comparison", font=dict(size=16, family="Inter")),
-                    height=320,
-                    template="plotly_white",
-                    font=dict(family="Inter"),
-                    yaxis_title="eGFR (mL/min/1.73m\u00b2)",
-                    xaxis_title="",
-                    margin=dict(t=60, b=20, l=20, r=20),
-                    showlegend=False,
-                )
+                fig_comp.update_layout(title=dict(text="eGFR Comparison", font=dict(size=16, family="Inter")),
+                                       height=320, template="plotly_white", font=dict(family="Inter"), yaxis_title="eGFR (mL/min/1.73m\u00b2)", showlegend=False)
                 st.plotly_chart(fig_comp, use_container_width=True)
             else:
                 st.markdown("""
                 <div class="info-card">
                     <h4>Cystatin C Comparison</h4>
                     <p>Enable Cystatin C input to see a comparison between creatinine-based
-                    and cystatin C-based eGFR estimates. Cystatin C may be more accurate
-                    in certain populations (elderly, extreme muscle mass, etc.).</p>
+                    and cystatin C-based eGFR estimates.</p>
                 </div>
                 """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
         # KDIGO Risk Matrix
-        st.markdown("**KDIGO Risk Matrix — Prognosis of CKD by GFR and Albuminuria**")
-
-        # Define the risk colors for the KDIGO matrix
-        # Rows: G1, G2, G3a, G3b, G4, G5
-        # Cols: A1, A2, A3
+        st.markdown("**KDIGO Risk Matrix - Prognosis of CKD by GFR and Albuminuria**")
         kdigo_colors = [
-            ["#d5f5e3", "#eafaf1", "#fdebd0"],  # G1
-            ["#d5f5e3", "#eafaf1", "#fdebd0"],  # G2
-            ["#eafaf1", "#fdebd0", "#fadbd8"],  # G3a
-            ["#fdebd0", "#fadbd8", "#fadbd8"],  # G3b
-            ["#fadbd8", "#fadbd8", "#f1948a"],  # G4
-            ["#fadbd8", "#f1948a", "#f1948a"],  # G5
+            ["#d5f5e3", "#eafaf1", "#fdebd0"],
+            ["#d5f5e3", "#eafaf1", "#fdebd0"],
+            ["#eafaf1", "#fdebd0", "#fadbd8"],
+            ["#fdebd0", "#fadbd8", "#fadbd8"],
+            ["#fadbd8", "#fadbd8", "#f1948a"],
+            ["#fadbd8", "#f1948a", "#f1948a"],
         ]
         kdigo_labels = [
-            ["Low", "Moderate", "High"],
-            ["Low", "Moderate", "High"],
-            ["Moderate", "High", "Very High"],
-            ["High", "Very High", "Very High"],
-            ["Very High", "Very High", "Very High"],
-            ["Very High", "Very High", "Very High"],
+            ["Low", "Moderate", "High"], ["Low", "Moderate", "High"],
+            ["Moderate", "High", "Very High"], ["High", "Very High", "Very High"],
+            ["Very High", "Very High", "Very High"], ["Very High", "Very High", "Very High"],
         ]
-        gfr_stages = [
-            ("G1", "\u226590"),
-            ("G2", "60-89"),
-            ("G3a", "45-59"),
-            ("G3b", "30-44"),
-            ("G4", "15-29"),
-            ("G5", "<15"),
-        ]
-        alb_stages = [
-            ("A1", "<30"),
-            ("A2", "30-300"),
-            ("A3", ">300"),
-        ]
+        gfr_stages = [("G1", "\u226590"), ("G2", "60-89"), ("G3a", "45-59"), ("G3b", "30-44"), ("G4", "15-29"), ("G5", "<15")]
+        alb_stages = [("A1", "<30"), ("A2", "30-300"), ("A3", ">300")]
 
-        # Determine patient's position
         gfr_row_map = {"G1": 0, "G2": 1, "G3a": 2, "G3b": 3, "G4": 4, "G5": 5}
         alb_col_map = {"A1": 0, "A2": 1, "A3": 2}
         patient_row = gfr_row_map.get(ckd_stage, -1)
@@ -1933,7 +2015,6 @@ elif section == "Kidney Function":
         for astage, arange in alb_stages:
             matrix_html += f'<th>{astage}<br><small>{arange} mg/g</small></th>'
         matrix_html += '</tr></thead><tbody>'
-
         for i, (gstage, grange) in enumerate(gfr_stages):
             matrix_html += f'<tr><td style="font-weight:600;">{gstage}</td><td>{grange}</td>'
             for j in range(3):
@@ -1943,48 +2024,19 @@ elif section == "Kidney Function":
                 matrix_html += f'<td><div class="ckd-cell" style="background:{bg};border:{border};">{label}</div></td>'
             matrix_html += '</tr>'
         matrix_html += '</tbody></table>'
-
         st.markdown(matrix_html, unsafe_allow_html=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        # Clinical interpretation
-        st.markdown("**Clinical Interpretation**")
-        interp = []
-        interp.append(f"eGFR (creatinine-based) is {egfr_cr} mL/min/1.73m\u00b2, corresponding to CKD stage {ckd_stage} ({ckd_desc}).")
-        if egfr_cysc is not None:
-            cysc_stage, cysc_desc, _ = stage_ckd(egfr_cysc)
-            interp.append(f"eGFR (cystatin C-based) is {egfr_cysc} mL/min/1.73m\u00b2, corresponding to CKD stage {cysc_stage} ({cysc_desc}).")
-            if abs(egfr_cr - egfr_cysc) > 15:
-                interp.append("Significant discordance between creatinine and cystatin C eGFR. Consider factors affecting creatinine (muscle mass, diet) or cystatin C (thyroid dysfunction, corticosteroids).")
-
-        interp.append(f"Albuminuria stage: {alb_stage} ({alb_desc}) with UACR of {kf_uacr} mg/g.")
-
-        if bun_cr_ratio > 20:
-            interp.append(f"Elevated BUN/Creatinine ratio ({bun_cr_ratio}) may suggest pre-renal azotemia, GI bleeding, or high protein intake.")
-        elif bun_cr_ratio < 10:
-            interp.append(f"Low BUN/Creatinine ratio ({bun_cr_ratio}) may suggest liver disease, malnutrition, or overhydration.")
-
-        risk_label = kdigo_labels[patient_row][patient_col] if patient_row >= 0 and patient_col >= 0 else "Unknown"
-        interp.append(f"KDIGO composite risk category: {risk_label}. " +
-                      ("Referral to nephrology recommended." if risk_label in ["High", "Very High"] else "Routine monitoring appropriate."))
-
-        for msg in interp:
-            st.info(msg)
-
-        # Detailed interpretation
         st.markdown("---")
-        with st.expander("Detailed Report — What Your Kidney Results Mean", expanded=True):
+        with st.expander("Detailed Report - What Your Kidney Results Mean", expanded=True):
             st.markdown(interpret_kidney_results(
                 egfr_cr, egfr_cysc, ckd_stage, ckd_desc,
-                alb_stage, alb_desc, kf_uacr, kf_bun, kf_creat
+                alb_stage, alb_desc, kf_uacr, kf_bun, kf_cr
             ))
 
         st.markdown("""
         <div class="disclaimer">
             <strong>Clinical Disclaimer:</strong> This kidney function assessment uses the CKD-EPI 2021 race-free
-            equations and KDIGO 2012 staging guidelines. It is intended for screening and educational purposes only.
-            Clinical decisions should be made in consultation with a nephrologist or qualified healthcare provider.
+            equations and KDIGO staging guidelines. For screening and educational purposes only.
         </div>
         """, unsafe_allow_html=True)
 
@@ -2000,7 +2052,6 @@ elif section == "Lab Report Upload":
 
     tab_parsed, tab_raw = st.tabs(["Parsed Results", "Raw Text"])
 
-    # Try to parse PDF
     lab_data = None
     raw_text = ""
     used_demo = False
@@ -2014,29 +2065,20 @@ elif section == "Lab Report Upload":
                     pages_text.append(page.extract_text() or "")
                 raw_text = "\n".join(pages_text)
 
-            # Attempt regex extraction
-            # Pattern: analyte name, value, unit, reference range
             parsed_labs = []
-            # Try common lab report patterns
             patterns = [
-                # Pattern: Name  Value  Unit  Low-High
                 r'([A-Za-z\s/\-]+?)\s+([\d.]+)\s+([A-Za-z/%\u00b3\u00b5\u2076\s]+?)\s+([\d.]+)\s*[-\u2013]\s*([\d.]+)',
             ]
             for pattern in patterns:
                 matches = re.findall(pattern, raw_text)
                 for match in matches:
                     try:
-                        analyte = match[0].strip()
-                        value = float(match[1])
-                        unit = match[2].strip()
-                        ref_low = float(match[3])
-                        ref_high = float(match[4])
                         parsed_labs.append({
-                            "analyte": analyte,
-                            "value": value,
-                            "unit": unit,
-                            "ref_low": ref_low,
-                            "ref_high": ref_high,
+                            "analyte": match[0].strip(),
+                            "value": float(match[1]),
+                            "unit": match[2].strip(),
+                            "ref_low": float(match[3]),
+                            "ref_high": float(match[4]),
                         })
                     except (ValueError, IndexError):
                         continue
@@ -2047,12 +2089,11 @@ elif section == "Lab Report Upload":
                 lab_data = DEMO_LAB_REPORT
                 used_demo = True
                 st.warning("Could not parse lab values from PDF. Showing demo data for illustration.")
-
         except ImportError:
-            st.warning("pdfplumber is not installed. Install with: pip install pdfplumber. Showing demo data.")
+            st.warning("pdfplumber is not installed. Showing demo data.")
             lab_data = DEMO_LAB_REPORT
             used_demo = True
-            raw_text = "(PDF parsing unavailable — pdfplumber not installed)"
+            raw_text = "(PDF parsing unavailable)"
         except Exception as e:
             st.error(f"Error reading PDF: {e}")
             lab_data = DEMO_LAB_REPORT
@@ -2063,131 +2104,74 @@ elif section == "Lab Report Upload":
 
     with tab_parsed:
         if lab_data:
-            # Classify each value
             results = []
             for item in lab_data:
-                status, css_class, color = classify_value(
-                    item["value"], item["ref_low"], item["ref_high"]
-                )
+                status, css_class, color = classify_value(item["value"], item["ref_low"], item["ref_high"])
                 results.append({**item, "status": status, "css_class": css_class, "color": color})
 
-            # Summary metrics
             total_tests = len(results)
             normal_count = sum(1 for r in results if r["status"] == "Normal")
             abnormal_count = total_tests - normal_count
 
             sc1, sc2, sc3 = st.columns(3, gap="medium")
             with sc1:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <p class="metric-label">Total Tests</p>
-                    <p class="metric-value">{total_tests}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f'<div class="metric-card"><p class="metric-label">Total Tests</p><p class="metric-value">{total_tests}</p></div>', unsafe_allow_html=True)
             with sc2:
-                st.markdown(f"""
-                <div class="metric-card risk-low">
-                    <p class="metric-label">Normal</p>
-                    <p class="metric-value">{normal_count}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f'<div class="metric-card risk-low"><p class="metric-label">Normal</p><p class="metric-value">{normal_count}</p></div>', unsafe_allow_html=True)
             with sc3:
                 abn_class = "risk-high" if abnormal_count > 0 else "risk-low"
-                st.markdown(f"""
-                <div class="metric-card {abn_class}">
-                    <p class="metric-label">Abnormal</p>
-                    <p class="metric-value">{abnormal_count}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f'<div class="metric-card {abn_class}"><p class="metric-label">Abnormal</p><p class="metric-value">{abnormal_count}</p></div>', unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
-
             if used_demo:
-                st.markdown("""
-                <div class="info-card">
-                    <h4>Demo Lab Report</h4>
-                    <p>Displaying sample lab data for demonstration. Upload a PDF to analyze your own report.</p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown('<div class="info-card"><h4>Demo Lab Report</h4><p>Displaying sample lab data for demonstration. Upload a PDF to analyze your own report.</p></div>', unsafe_allow_html=True)
 
-            # Styled HTML table
             table_rows = ""
             for r in results:
-                table_rows += f"""
-                <tr>
+                table_rows += f"""<tr>
                     <td style="font-weight:600;">{r['analyte']}</td>
-                    <td>{r['value']}</td>
-                    <td>{r['unit']}</td>
+                    <td>{r['value']}</td><td>{r['unit']}</td>
                     <td>{r['ref_low']} - {r['ref_high']}</td>
                     <td><span class="{r['css_class']}">{r['status']}</span></td>
                 </tr>"""
 
             st.markdown(f"""
             <table class="lab-table">
-                <thead>
-                    <tr>
-                        <th>Analyte</th>
-                        <th>Value</th>
-                        <th>Unit</th>
-                        <th>Reference Range</th>
-                        <th>Flag</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Analyte</th><th>Value</th><th>Unit</th><th>Reference Range</th><th>Flag</th></tr></thead>
                 <tbody>{table_rows}</tbody>
             </table>
             """, unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # Abnormal values bar chart
             abnormal_results = [r for r in results if r["status"] != "Normal"]
             if abnormal_results:
-                st.markdown("**Abnormal Values — Deviation from Reference Range**")
-                abn_names = []
-                abn_deviations = []
-                abn_colors = []
-                for r in abnormal_results:
-                    abn_names.append(r["analyte"])
-                    if r["value"] > r["ref_high"]:
-                        dev = r["value"] - r["ref_high"]
-                    else:
-                        dev = r["ref_low"] - r["value"]
-                    abn_deviations.append(round(dev, 2))
-                    abn_colors.append(r["color"])
+                st.markdown("**Abnormal Values - Deviation from Reference Range**")
+                abn_names = [r["analyte"] for r in abnormal_results]
+                abn_devs = [round(r["value"] - r["ref_high"] if r["value"] > r["ref_high"] else r["ref_low"] - r["value"], 2) for r in abnormal_results]
+                abn_colors = [r["color"] for r in abnormal_results]
 
                 fig_abn = go.Figure(data=[go.Bar(
-                    x=abn_names, y=abn_deviations,
-                    marker_color=abn_colors,
-                    text=[f"+{d}" if d > 0 else str(d) for d in abn_deviations],
-                    textposition="outside",
-                    textfont=dict(family="Inter", size=12),
+                    x=abn_names, y=abn_devs, marker_color=abn_colors,
+                    text=[f"+{d}" if d > 0 else str(d) for d in abn_devs], textposition="outside",
                 )])
-                fig_abn.update_layout(
-                    height=320,
-                    template="plotly_white",
-                    font=dict(family="Inter"),
-                    yaxis_title="Deviation from Reference",
-                    xaxis_title="",
-                    margin=dict(t=40, b=20, l=20, r=20),
-                    showlegend=False,
-                )
+                fig_abn.update_layout(height=320, template="plotly_white", font=dict(family="Inter"), yaxis_title="Deviation from Reference", showlegend=False)
                 st.plotly_chart(fig_abn, use_container_width=True)
 
-        # Detailed explanations for each lab value
         st.markdown("---")
-        with st.expander("Detailed Report — What Each Lab Value Means", expanded=False):
-            for r in results:
-                name = r["analyte"]
-                if name in LAB_GENERAL_EXPLANATIONS:
-                    st.markdown(f"**{name}: {r['value']} {r['unit']}** — _{r['status']}_")
-                    st.markdown(LAB_GENERAL_EXPLANATIONS[name])
-                    st.markdown("---")
+        with st.expander("Detailed Report - What Each Lab Value Means", expanded=False):
+            if lab_data:
+                for r in results:
+                    name = r["analyte"]
+                    if name in LAB_GENERAL_EXPLANATIONS:
+                        st.markdown(f"**{name}: {r['value']} {r['unit']}** - _{r['status']}_")
+                        st.markdown(LAB_GENERAL_EXPLANATIONS[name])
+                        st.markdown("---")
 
         st.markdown("""
         <div class="disclaimer">
             <strong>Disclaimer:</strong> Automated PDF parsing may be inaccurate. Values extracted from uploaded
-            reports should be verified against the original document. This tool is for educational and screening
-            purposes only and does not replace professional laboratory interpretation.
+            reports should be verified against the original document.
         </div>
         """, unsafe_allow_html=True)
 
@@ -2195,14 +2179,84 @@ elif section == "Lab Report Upload":
         if raw_text:
             st.text_area("Raw Extracted Text", raw_text, height=400)
         else:
-            st.info("Upload a PDF to see the raw extracted text. Demo mode does not have raw text.")
+            st.info("Upload a PDF to see the raw extracted text.")
 
+
+# ============================================================
+# PRIVACY & HIPAA COMPLIANCE PAGE
+# ============================================================
+elif section == "Privacy & Compliance":
+    st.markdown('<p class="section-header">Privacy & HIPAA Compliance</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Information about data handling, privacy practices, and regulatory compliance.</p>', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="info-card">
+        <h4>Data Privacy Statement</h4>
+        <p>This application is designed for <strong>educational and research purposes only</strong>.
+        It is not a HIPAA-covered entity and should not be used for clinical decision-making with real patient data.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### Key Privacy Principles")
+
+    col1, col2 = st.columns(2, gap="large")
+    with col1:
         st.markdown("""
-        <div class="disclaimer">
-            <strong>Disclaimer:</strong> Automated PDF parsing may be inaccurate. Always verify extracted values
-            against the original document.
-        </div>
-        """, unsafe_allow_html=True)
+        **No Data Storage**
+        - All uploaded files (ECGs, X-rays, PDFs) are processed in-memory only
+        - No patient data is stored on any server or database
+        - Data is discarded when the browser session ends
+
+        **No Data Transmission**
+        - All AI inference runs locally on the server
+        - No patient data is sent to third-party APIs
+        - No cloud-based ML services are used
+
+        **Local Processing**
+        - All models run on the deployment server
+        - No external API calls for predictions
+        - No telemetry or analytics tracking of patient data
+        """)
+
+    with col2:
+        st.markdown("""
+        **HIPAA Considerations**
+        - This tool is **not HIPAA-compliant** and should not be used with Protected Health Information (PHI)
+        - For clinical use, a HIPAA-compliant deployment would require:
+            - Business Associate Agreements (BAAs)
+            - Encrypted data storage and transmission (AES-256, TLS 1.2+)
+            - Access controls and audit logging
+            - Regular security assessments
+            - Breach notification procedures
+
+        **Intended Use**
+        - Academic research and education
+        - Demonstration of AI capabilities in healthcare
+        - Portfolio project for data science coursework
+        - **NOT** for clinical diagnosis or treatment decisions
+        """)
+
+    st.markdown("---")
+
+    st.markdown("### Regulatory Framework Reference")
+    st.markdown("""
+    | Regulation | Description | Applicability |
+    |:-----------|:-----------|:-------------|
+    | **HIPAA** | Health Insurance Portability and Accountability Act | PHI protection in US healthcare |
+    | **HITECH** | Health Information Technology for Economic and Clinical Health Act | Electronic health records |
+    | **FDA 21 CFR Part 11** | Electronic records and signatures | Clinical software validation |
+    | **GDPR** | General Data Protection Regulation | EU patient data protection |
+    | **IEC 62304** | Medical device software lifecycle | Software as Medical Device (SaMD) |
+    """)
+
+    st.markdown("""
+    <div class="disclaimer">
+        <strong>Important Notice:</strong> This application is a research prototype developed as part of an academic
+        program at Northwestern University. It has not been validated for clinical use, has not received FDA clearance
+        or approval, and should not be used as a substitute for professional medical advice, diagnosis, or treatment.
+        Always consult a qualified healthcare provider for medical decisions.
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ============================================================

@@ -1,8 +1,12 @@
 # Data (too large for git)
-data/ecg/
+data/ecg/*.npy
 data/xray/
 data/vitals/*.csv
 !data/vitals/.gitkeep
+
+# Sample data (keep in git for testing)
+!data/samples/
+!data/samples/**
 
 # Models
 models/*.h5
