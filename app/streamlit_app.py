@@ -781,6 +781,7 @@ if section == "Home":
 # HEART / ECG SECTION
 # ============================================================
 elif section == "Heart / ECG":
+    st.button("← Back to Home", key="back_home_ecg", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Heart / ECG Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Upload a 12-lead ECG recording, try a sample, or explore the demo analysis.</p>', unsafe_allow_html=True)
 
@@ -974,6 +975,7 @@ elif section == "Heart / ECG":
 # CHEST X-RAY SECTION
 # ============================================================
 elif section == "Chest X-Ray":
+    st.button("← Back to Home", key="back_home_xray", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Chest X-Ray Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Upload a frontal chest X-ray, try a sample image, or view a demo prediction.</p>', unsafe_allow_html=True)
 
@@ -1089,6 +1091,7 @@ elif section == "Chest X-Ray":
 # HEALTH RISK ASSESSMENT — Step-by-Step Questionnaire
 # ============================================================
 elif section == "Health Risk Assessment":
+    st.button("← Back to Home", key="back_home_hra", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Health Risk Assessment</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Answer a few questions one step at a time to generate your heart disease risk prediction.</p>', unsafe_allow_html=True)
 
@@ -1439,6 +1442,7 @@ elif section == "Health Risk Assessment":
 # CBC ANALYSIS SECTION
 # ============================================================
 elif section == "CBC Analysis":
+    st.button("← Back to Home", key="back_home_cbc", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">CBC Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Enter complete blood count values for automated classification, differential visualization, and clinical interpretation.</p>', unsafe_allow_html=True)
 
@@ -1590,6 +1594,7 @@ elif section == "CBC Analysis":
 # DIABETES SCREENING SECTION
 # ============================================================
 elif section == "Diabetes Screening":
+    st.button("← Back to Home", key="back_home_diabetes", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Diabetes Screening</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Comprehensive diabetes risk assessment using HbA1c, fasting glucose, and the FINDRISC questionnaire.</p>', unsafe_allow_html=True)
 
@@ -1729,6 +1734,7 @@ elif section == "Diabetes Screening":
 # LIPID PANEL / CV RISK SECTION
 # ============================================================
 elif section == "Lipid Panel / CV Risk":
+    st.button("← Back to Home", key="back_home_lipid", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Lipid Panel / CV Risk</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Lipid classification and 10-year ASCVD risk estimation using the Pooled Cohort Equations.</p>', unsafe_allow_html=True)
 
@@ -1882,6 +1888,7 @@ elif section == "Lipid Panel / CV Risk":
 # KIDNEY FUNCTION SECTION
 # ============================================================
 elif section == "Kidney Function":
+    st.button("← Back to Home", key="back_home_kidney", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Kidney Function</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">CKD-EPI 2021 race-free eGFR estimation with KDIGO staging and risk classification.</p>', unsafe_allow_html=True)
 
@@ -2045,6 +2052,7 @@ elif section == "Kidney Function":
 # LAB REPORT UPLOAD SECTION
 # ============================================================
 elif section == "Lab Report Upload":
+    st.button("← Back to Home", key="back_home_lab", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Lab Report Upload</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Upload a lab report PDF for automated parsing, or explore the demo report with color-coded analysis.</p>', unsafe_allow_html=True)
 
@@ -2186,6 +2194,7 @@ elif section == "Lab Report Upload":
 # PRIVACY & HIPAA COMPLIANCE PAGE
 # ============================================================
 elif section == "Privacy & Compliance":
+    st.button("← Back to Home", key="back_home_privacy", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Privacy & HIPAA Compliance</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Information about data handling, privacy practices, and regulatory compliance.</p>', unsafe_allow_html=True)
 
