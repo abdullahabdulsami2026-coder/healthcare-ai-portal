@@ -595,8 +595,8 @@ st.markdown("""
         font-weight: 600;
         margin: 2px;
     }
-    .status-loaded { background: #d5f5e3; color: #27ae60; }
-    .status-demo { background: #fef9e7; color: #f39c12; }
+    .status-loaded { background: rgba(39,174,96,0.25); color: #2ecc71 !important; border: 1px solid rgba(39,174,96,0.4); }
+    .status-demo { background: rgba(243,156,18,0.25); color: #f1c40f !important; border: 1px solid rgba(243,156,18,0.4); }
 
     /* Hide Streamlit defaults */
     #MainMenu {visibility: hidden;}
