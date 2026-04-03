@@ -15,7 +15,10 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+import plotly.io as pio
 import streamlit as st
+
+pio.templates.default = "plotly_white"
 
 # Add project root to path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -150,7 +153,7 @@ def _fallback_risk(age, sex_val, cp_val, trestbps, chol, fbs_val, thalach, exang
 # Page Config
 # ============================================================
 st.set_page_config(
-    page_title="Healthcare AI Portal",
+    page_title="Healthcare AI Prediction Portal",
     page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -162,6 +165,17 @@ st.set_page_config(
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    /* Disclaimer styling */
+    .disclaimer {
+        background: #FFF8E1;
+        border-left: 4px solid #FFC107;
+        padding: 12px 16px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        color: #5D4037;
+        margin-top: 24px;
+    }
 
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -186,7 +200,7 @@ st.markdown("""
         right: -20%;
         width: 500px;
         height: 500px;
-        background: radial-gradient(circle, rgba(46,134,193,0.15) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(0,119,182,0.2) 0%, transparent 70%);
         border-radius: 50%;
     }
     .hero h1 {
@@ -220,7 +234,7 @@ st.markdown("""
         font-size: 0.85rem;
         font-weight: 500;
     }
-    .stat-pill strong { font-weight: 700; color: #5dade2; }
+    .stat-pill strong { font-weight: 700; color: #0077B6; }
 
     /* Feature Cards */
     .feature-card {
@@ -231,11 +245,14 @@ st.markdown("""
         border: 1px solid rgba(0,0,0,0.04);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
     .feature-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-        border-color: rgba(26,82,118,0.15);
+        border-color: rgba(0,119,182,0.25);
     }
     .feature-icon {
         width: 52px;
@@ -267,6 +284,7 @@ st.markdown("""
         font-size: 0.88rem;
         line-height: 1.55;
         margin: 0;
+        min-height: 60px;
     }
     .feature-tag {
         display: inline-block;
@@ -287,7 +305,7 @@ st.markdown("""
         border-radius: 14px;
         padding: 22px 20px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
-        border-left: 4px solid #2c5364;
+        border-left: 4px solid #0077B6;
         margin-bottom: 12px;
         transition: all 0.25s ease;
     }
@@ -386,7 +404,7 @@ st.markdown("""
         transition: all 0.25s ease;
     }
     .upload-zone:hover {
-        border-color: #2c5364;
+        border-color: #0077B6;
         background: #f8fafb;
     }
     .upload-icon { font-size: 2.5rem; margin-bottom: 12px; }
@@ -394,7 +412,7 @@ st.markdown("""
 
     /* Sidebar Styling */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f2027 0%, #1a3a47 100%);
+        background: linear-gradient(180deg, #003D5C 0%, #005F8C 100%);
     }
     [data-testid="stSidebar"] * {
         color: rgba(255,255,255,0.85) !important;
@@ -415,7 +433,7 @@ st.markdown("""
 
     /* Button Styling */
     .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #0f2027, #2c5364) !important;
+        background: linear-gradient(135deg, #0077B6, #005F8C) !important;
         border: none !important;
         border-radius: 12px !important;
         padding: 12px 24px !important;
@@ -425,7 +443,7 @@ st.markdown("""
         transition: all 0.3s ease !important;
     }
     .stButton > button[kind="primary"]:hover {
-        box-shadow: 0 6px 20px rgba(15,32,39,0.3) !important;
+        box-shadow: 0 6px 20px rgba(0,95,140,0.3) !important;
         transform: translateY(-1px) !important;
     }
 
@@ -451,7 +469,7 @@ st.markdown("""
         font-size: 0.78rem;
         letter-spacing: 0.01em;
     }
-    .footer a { color: #2c5364; text-decoration: none; font-weight: 600; }
+    .footer a { color: #0077B6; text-decoration: none; font-weight: 600; }
     .footer-divider {
         width: 60px;
         height: 2px;
@@ -512,16 +530,7 @@ st.markdown("""
         border-bottom: 1px solid #eef1f5;
     }
 
-    /* Disclaimer */
-    .disclaimer {
-        background: #fff3cd;
-        border: 1px solid #ffc107;
-        border-radius: 10px;
-        padding: 14px 18px;
-        font-size: 0.82rem;
-        color: #856404;
-        margin: 16px 0;
-    }
+    /* Disclaimer (duplicate kept for specificity) */
 
     /* CKD Grid */
     .ckd-grid {
@@ -580,7 +589,7 @@ st.markdown("""
         overflow: hidden;
     }
     .progress-bar-fill {
-        background: linear-gradient(90deg, #2c5364, #5dade2);
+        background: linear-gradient(90deg, #0077B6, #00B4D8);
         height: 100%;
         border-radius: 10px;
         transition: width 0.4s ease;
@@ -625,7 +634,7 @@ if "hra_submitted" not in st.session_state:
 NAV_OPTIONS = [
     "Home", "Heart / ECG", "Chest X-Ray", "Health Risk Assessment",
     "CBC Analysis", "Diabetes Screening", "Lipid Panel / CV Risk",
-    "Kidney Function", "Lab Report Upload", "Privacy & Compliance",
+    "Kidney Function", "Lab Report Upload", "AI Assistant", "Privacy & Compliance",
 ]
 
 
@@ -638,8 +647,13 @@ def navigate_to(section_name):
 # Sidebar
 # ============================================================
 with st.sidebar:
-    st.markdown("### Healthcare AI")
-    st.markdown("**Prediction Portal**")
+    st.markdown("""
+    <div style="text-align: center; padding: 8px 0 4px;">
+        <div style="font-size: 2.2rem; margin-bottom: 2px;">🏥</div>
+        <div style="font-size: 1.1rem; font-weight: 800; color: #E0F0FF; letter-spacing: -0.02em;">Healthcare AI</div>
+        <div style="font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.6);">Prediction Portal</div>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("---")
 
     section = st.radio(
@@ -701,6 +715,61 @@ if section == "Home":
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # How It Works Steps
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<p class="section-header">How It Works</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Get AI-powered clinical insights in four simple steps.</p>', unsafe_allow_html=True)
+
+    step_cols = st.columns(4, gap="medium")
+    steps = [
+        ("1", "🔍", "Browse Modules", "Explore our 10 clinical AI tools below"),
+        ("2", "👆", "Select a Module", "Click 'Open' on any module to get started"),
+        ("3", "📤", "Upload or Try Samples", "Provide your data or use built-in sample datasets"),
+        ("4", "📊", "View Results", "Get AI predictions with visual explanations instantly"),
+    ]
+    for col, (num, icon, title, desc) in zip(step_cols, steps):
+        with col:
+            st.markdown(f"""
+            <div style="text-align: center; padding: 20px 12px; background: white; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); height: 100%;">
+                <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0077B6, #005F8C); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin: 0 auto 12px auto;">
+                    {num}
+                </div>
+                <div style="font-size: 1.5rem; margin-bottom: 4px;">{icon}</div>
+                <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #1a2332;">{title}</h4>
+                <p style="font-size: 0.85rem; color: #6b7b8d; margin: 0;">{desc}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Why Use This Portal?</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Built for students, researchers, and clinicians who want to explore AI in healthcare.</p>', unsafe_allow_html=True)
+
+    benefits = [
+        ("⚡", "Free & Instant", "All 10 clinical AI tools are completely free with no registration required. Get results in seconds."),
+        ("🔬", "Research-Grade Models", "Built on peer-reviewed ML architectures including CNNs, transfer learning, and ensemble methods with published accuracy metrics."),
+        ("🧪", "Try Before You Upload", "Every module includes built-in sample data so you can explore and understand the tools before using your own data."),
+        ("📖", "Educational & Transparent", "Each tool explains how its AI model works, what the results mean, and what the limitations are."),
+        ("🔒", "Privacy First", "Your uploaded data is processed in real time and never stored. No accounts, no data collection, no tracking."),
+        ("🩺", "Clinically Relevant", "Modules cover cardiology, radiology, hematology, nephrology, endocrinology, and more."),
+    ]
+
+    for row_start in range(0, len(benefits), 3):
+        cols = st.columns(3, gap="medium")
+        for i, col in enumerate(cols):
+            idx = row_start + i
+            if idx < len(benefits):
+                icon, title, desc = benefits[idx]
+                with col:
+                    st.markdown(f"""
+                    <div class="info-card" style="min-height: 140px;">
+                        <div style="font-size: 1.5rem; margin-bottom: 8px;">{icon}</div>
+                        <h4>{title}</h4>
+                        <p>{desc}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
 
     CARD_DATA = [
         ("Heart / ECG", "icon-ecg", "❤️", "Heart / ECG Analysis",
@@ -785,6 +854,61 @@ elif section == "Heart / ECG":
     st.markdown('<p class="section-header">Heart / ECG Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Upload a 12-lead ECG recording, try a sample, or explore the demo analysis.</p>', unsafe_allow_html=True)
 
+    with st.expander("About This Module"):
+        st.write("""
+        Electrocardiogram (ECG) analysis is one of the most important diagnostic tools in
+        cardiology. This module uses deep learning to automatically classify 12-lead ECG
+        recordings into multiple arrhythmia categories, including normal sinus rhythm,
+        ST/T wave changes, conduction disturbances, hypertrophy, and myocardial infarction.
+
+        Useful for medical students learning ECG interpretation, researchers working with
+        ECG datasets, and anyone interested in AI-applied cardiac diagnostics.
+        """)
+
+    with st.expander("How the Model Works"):
+        st.write("""
+        **Architecture:** 1D Convolutional Neural Network (1D-CNN)
+
+        **Training Data:** 21,837 clinical 12-lead ECG recordings from the PTB-XL dataset
+        (PhysioNet), sampled at 500Hz with 10-second duration.
+
+        **Preprocessing:** Raw ECG signals are bandpass filtered, normalized, and segmented
+        into fixed-length windows before being fed into the CNN.
+
+        **Performance:** Accuracy: 99.5%
+
+        **Pipeline:** Raw ECG File -> Signal Preprocessing -> 1D-CNN Classification ->
+        Arrhythmia Category + Confidence Score
+        """)
+
+    with st.expander("Input Requirements"):
+        st.write("""
+        - **Accepted formats:** CSV, DAT, HEA, NPY
+        - **Expected data:** 12-lead ECG recording. CSV files should have columns for each lead (I, II, III, aVR, aVL, aVF, V1-V6).
+        - **Sample rate:** 500 Hz recommended
+        - You can also use the built-in sample data or demo mode to test without uploading.
+        """)
+
+    with st.expander("Understanding Your Results"):
+        st.write("""
+        The model outputs a classification (e.g., Normal Sinus Rhythm, Atrial Fibrillation)
+        along with a confidence probability chart.
+
+        - **High confidence (>90%):** The model is fairly certain about its classification.
+        - **Moderate confidence (60-90%):** Consider the top 2-3 classifications.
+        - **Low confidence (<60%):** The recording may be noisy or ambiguous.
+
+        The HRV (Heart Rate Variability) metrics provide additional context about cardiac rhythm regularity.
+        """)
+
+    st.markdown("""
+    <div class="disclaimer">
+        <strong>⚠ Disclaimer:</strong> This tool is for educational and research purposes only.
+        It is not FDA-approved and should not be used as a substitute for professional medical diagnosis.
+        Always consult a qualified healthcare provider.
+    </div>
+    """, unsafe_allow_html=True)
+
     tab_upload, tab_sample, tab_demo = st.tabs(["Upload ECG", "Try Sample Data", "Demo Analysis"])
 
     def run_ecg_prediction(ecg_data, tab_context="upload"):
@@ -810,7 +934,7 @@ elif section == "Heart / ECG":
             template="plotly_white",
             font=dict(family="Inter"),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="ecg_signal_chart")
 
         # Predict
         if _ecg_loaded:
@@ -842,7 +966,7 @@ elif section == "Heart / ECG":
                     color_continuous_scale=["#e8eef3", "#2c5364"],
                 )
                 fig_p.update_layout(height=300, template="plotly_white", font=dict(family="Inter"))
-                st.plotly_chart(fig_p, use_container_width=True)
+                st.plotly_chart(fig_p, use_container_width=True, key="ecg_probability_model")
 
                 if class_names[pred_idx] in ECG_CLASS_EXPLANATIONS:
                     with st.expander("What does this mean?", expanded=True):
@@ -861,13 +985,14 @@ elif section == "Heart / ECG":
                 color_continuous_scale=["#e8eef3", "#2c5364"],
             )
             fig_p.update_layout(height=260, template="plotly_white", font=dict(family="Inter"), showlegend=False)
-            st.plotly_chart(fig_p, use_container_width=True)
+            st.plotly_chart(fig_p, use_container_width=True, key="ecg_probability_sample")
 
     # --- Upload Tab ---
     with tab_upload:
         uploaded_file = st.file_uploader(
             "Choose ECG file", type=["csv", "dat", "hea", "npy"],
             help="CSV (columns = leads), NumPy arrays, or WFDB format",
+            key="ecg_file_uploader",
         )
 
         if uploaded_file is not None:
@@ -956,7 +1081,7 @@ elif section == "Heart / ECG":
             height=380, template="plotly_white",
             font=dict(family="Inter"),
         )
-        st.plotly_chart(fig_demo, use_container_width=True)
+        st.plotly_chart(fig_demo, use_container_width=True, key="ecg_demo_signal")
 
         demo_probs = pd.DataFrame({
             "Condition": ["Normal ECG", "ST/T Change", "Conduction Dist.", "Hypertrophy", "MI"],
@@ -968,7 +1093,7 @@ elif section == "Heart / ECG":
             color_continuous_scale=["#e8eef3", "#2c5364"],
         )
         fig_p.update_layout(height=260, template="plotly_white", font=dict(family="Inter"), showlegend=False)
-        st.plotly_chart(fig_p, use_container_width=True)
+        st.plotly_chart(fig_p, use_container_width=True, key="ecg_demo_probability")
 
 
 # ============================================================
@@ -978,6 +1103,56 @@ elif section == "Chest X-Ray":
     st.button("← Back to Home", key="back_home_xray", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Chest X-Ray Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Upload a frontal chest X-ray, try a sample image, or view a demo prediction.</p>', unsafe_allow_html=True)
+
+    with st.expander("About This Module"):
+        st.write("""
+        Chest X-ray analysis is a cornerstone of radiology. This module uses deep learning
+        to classify frontal chest X-ray images, detecting pneumonia versus normal findings.
+        It is useful for medical students studying radiology, researchers exploring AI in
+        medical imaging, and anyone interested in computer-aided diagnosis.
+        """)
+
+    with st.expander("How the Model Works"):
+        st.write("""
+        **Architecture:** MobileNetV2 with transfer learning (pretrained on ImageNet)
+
+        **Training Data:** NIH Chest X-ray14 dataset with 112,120 frontal-view chest X-ray
+        images annotated with 14 disease labels. Binary classifier trained for pneumonia detection.
+
+        **Preprocessing:** Images are resized to 224x224, normalized to [0, 1] range, and
+        augmented with random flips and rotations during training.
+
+        **Performance:** Accuracy varies by class; optimized for pneumonia sensitivity.
+
+        **Pipeline:** Chest X-Ray Image -> Resize & Normalize -> MobileNetV2 -> Pneumonia vs Normal + Confidence
+        """)
+
+    with st.expander("Input Requirements"):
+        st.write("""
+        - **Accepted formats:** PNG, JPEG/JPG
+        - **Expected data:** Frontal (PA or AP) chest X-ray image
+        - **Resolution:** Any resolution accepted; images are resized internally to 224x224
+        - You can also use the built-in sample images to test without uploading.
+        """)
+
+    with st.expander("Understanding Your Results"):
+        st.write("""
+        The model outputs a binary classification (Pneumonia or Normal) with a confidence score.
+
+        - **High confidence (>90%):** The model is fairly certain about its classification.
+        - **Moderate confidence (60-90%):** The result should be interpreted with caution.
+        - **Low confidence (<60%):** The image may be ambiguous or of poor quality.
+
+        A Grad-CAM heatmap (when available) highlights regions the model focused on.
+        """)
+
+    st.markdown("""
+    <div class="disclaimer">
+        <strong>⚠ Disclaimer:</strong> This tool is for educational and research purposes only.
+        It is not FDA-approved and should not be used as a substitute for professional medical diagnosis.
+        Always consult a qualified healthcare provider.
+    </div>
+    """, unsafe_allow_html=True)
 
     tab_upload, tab_sample = st.tabs(["Upload X-Ray", "Try Sample Data"])
 
@@ -1026,7 +1201,7 @@ elif section == "Chest X-Ray":
                     fig = px.pie(probs_df, values="Probability (%)", names="Class",
                                  color_discrete_sequence=["#27ae60", "#e74c3c"], hole=0.4)
                     fig.update_layout(height=300, font=dict(family="Inter"), margin=dict(t=20, b=20), template="plotly_white")
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, use_container_width=True, key="xray_prediction_pie")
 
                     with st.expander("Clinical Interpretation", expanded=True):
                         st.markdown(interpret_xray(predicted, f"{confidence:.1f}"))
@@ -1047,12 +1222,13 @@ elif section == "Chest X-Ray":
                 fig = px.pie(demo_data, values="Probability (%)", names="Condition",
                              color_discrete_sequence=["#27ae60", "#e74c3c"], hole=0.4)
                 fig.update_layout(height=300, font=dict(family="Inter"), margin=dict(t=20, b=20), template="plotly_white")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, key="xray_demo_pie")
 
     # --- Upload Tab ---
     with tab_upload:
         uploaded_xray = st.file_uploader(
             "Choose X-ray image", type=["png", "jpg", "jpeg"],
+            key="xray_file_uploader",
             help="Supported: PNG, JPEG. Frontal PA/AP view recommended.",
         )
         if uploaded_xray is not None:
@@ -1094,6 +1270,55 @@ elif section == "Health Risk Assessment":
     st.button("← Back to Home", key="back_home_hra", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Health Risk Assessment</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Answer a few questions one step at a time to generate your heart disease risk prediction.</p>', unsafe_allow_html=True)
+
+    with st.expander("About This Module"):
+        st.write("""
+        Heart disease is the leading cause of death worldwide. This module provides an
+        interactive step-by-step questionnaire that collects 13 clinical features and uses
+        machine learning to estimate heart disease risk. It is designed for educational
+        exploration of clinical risk prediction models.
+        """)
+
+    with st.expander("How the Model Works"):
+        st.write("""
+        **Algorithm:** Random Forest ensemble classifier
+
+        **Training Data:** UCI Heart Disease dataset with 920 patient records and 13 clinical
+        features including age, sex, chest pain type, blood pressure, cholesterol, and more.
+
+        **Performance:** Accuracy: 83%
+
+        **Pipeline:** Clinical Features (questionnaire) -> Feature Scaling -> Random Forest ->
+        Risk Score (0-100%) + Risk Category
+        """)
+
+    with st.expander("Input Requirements"):
+        st.write("""
+        - **No file upload needed** -- use the interactive questionnaire
+        - **13 clinical features:** Age, sex, chest pain type, resting blood pressure, cholesterol,
+          fasting blood sugar, resting ECG, max heart rate, exercise-induced angina, ST depression,
+          ST slope, number of major vessels, thalassemia type
+        - The questionnaire guides you through each input step by step.
+        """)
+
+    with st.expander("Understanding Your Results"):
+        st.write("""
+        The model outputs a heart disease risk score from 0% to 100%.
+
+        - **Low Risk (0-30%):** Few risk factors detected.
+        - **Moderate Risk (30-60%):** Some risk factors present; lifestyle changes recommended.
+        - **High Risk (60-100%):** Multiple risk factors detected; medical consultation advised.
+
+        Interactive charts show feature importance and risk factor breakdown.
+        """)
+
+    st.markdown("""
+    <div class="disclaimer">
+        <strong>⚠ Disclaimer:</strong> This tool is for educational and research purposes only.
+        It is not FDA-approved and should not be used as a substitute for professional medical diagnosis.
+        Always consult a qualified healthcare provider.
+    </div>
+    """, unsafe_allow_html=True)
 
     total_steps = 4
 
@@ -1403,7 +1628,7 @@ elif section == "Health Risk Assessment":
                 },
             ))
             fig_gauge.update_layout(height=320, margin=dict(t=60, b=20, l=30, r=30), paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter"))
-            st.plotly_chart(fig_gauge, use_container_width=True)
+            st.plotly_chart(fig_gauge, use_container_width=True, key="hra_gauge_chart")
 
         with col_r:
             categories = ["Age", "BP", "Cholesterol", "Heart Rate", "ST Depression", "Vessels"]
@@ -1429,7 +1654,7 @@ elif section == "Health Risk Assessment":
                 height=320, margin=dict(t=60, b=20, l=60, r=60),
                 paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter"),
             )
-            st.plotly_chart(fig_radar, use_container_width=True)
+            st.plotly_chart(fig_radar, use_container_width=True, key="hra_radar_chart")
 
         st.markdown("---")
         with st.expander("Detailed Report - What Your Results Mean", expanded=True):
@@ -1445,6 +1670,54 @@ elif section == "CBC Analysis":
     st.button("← Back to Home", key="back_home_cbc", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">CBC Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Enter complete blood count values for automated classification, differential visualization, and clinical interpretation.</p>', unsafe_allow_html=True)
+
+    with st.expander("About This Module"):
+        st.write("""
+        A Complete Blood Count (CBC) is one of the most commonly ordered blood tests. This
+        module interprets CBC values using clinical reference ranges, providing automated
+        classification and visual differential analysis. Useful for students learning
+        hematology and anyone exploring automated lab interpretation.
+        """)
+
+    with st.expander("How the Algorithm Works"):
+        st.write("""
+        **Algorithm:** Clinical rule-based algorithm (not machine learning)
+
+        **Method:** Each CBC parameter is compared against established clinical reference ranges,
+        stratified by sex. Values are classified as Low, Normal, or High with color-coded badges.
+
+        **Parameters Analyzed:** WBC, RBC, Hemoglobin, Hematocrit, Platelets, MCV, MCH, MCHC,
+        RDW, and WBC differential (Neutrophils, Lymphocytes, Monocytes, Eosinophils, Basophils).
+
+        **Reference Ranges:** Based on standard clinical laboratory reference intervals.
+        """)
+
+    with st.expander("Input Requirements"):
+        st.write("""
+        - **No file upload needed** -- enter values directly in the form
+        - **Required values:** WBC, RBC, Hemoglobin, Hematocrit, Platelets
+        - **Optional values:** MCV, MCH, MCHC, RDW, WBC differential percentages
+        - **Sex selection:** Required for sex-specific reference ranges
+        """)
+
+    with st.expander("Understanding Your Results"):
+        st.write("""
+        Results are displayed as color-coded badges:
+
+        - **Green (Normal):** Value is within the normal reference range.
+        - **Orange (High/Low):** Value is outside normal but not critical.
+        - **Red (Critical):** Value is significantly outside the normal range.
+
+        The WBC differential pie chart shows the relative proportions of white blood cell types.
+        """)
+
+    st.markdown("""
+    <div class="disclaimer">
+        <strong>⚠ Disclaimer:</strong> This tool is for educational and research purposes only.
+        It is not FDA-approved and should not be used as a substitute for professional medical diagnosis.
+        Always consult a qualified healthcare provider.
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.container():
         col1, col2, col3 = st.columns(3, gap="medium")
@@ -1559,7 +1832,7 @@ elif section == "CBC Analysis":
                 margin=dict(t=60, b=20, l=20, r=20), showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
             )
-            st.plotly_chart(fig_diff, use_container_width=True)
+            st.plotly_chart(fig_diff, use_container_width=True, key="cbc_diff_chart")
 
         with col_interp:
             findings = interpret_cbc(cbc_values, sex_key)
@@ -1597,6 +1870,54 @@ elif section == "Diabetes Screening":
     st.button("← Back to Home", key="back_home_diabetes", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Diabetes Screening</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Comprehensive diabetes risk assessment using HbA1c, fasting glucose, and the FINDRISC questionnaire.</p>', unsafe_allow_html=True)
+
+    with st.expander("About This Module"):
+        st.write("""
+        Diabetes affects over 400 million people worldwide. This module uses the validated
+        FINDRISC (Finnish Diabetes Risk Score) questionnaire combined with HbA1c and fasting
+        glucose thresholds to assess diabetes risk. It is a screening tool based on established
+        clinical guidelines, not a predictive ML model.
+        """)
+
+    with st.expander("How the Algorithm Works"):
+        st.write("""
+        **Algorithm:** Validated FINDRISC questionnaire + clinical thresholds
+
+        **FINDRISC:** A validated 8-question screening tool developed in Finland, widely used
+        globally to estimate 10-year risk of developing Type 2 diabetes.
+
+        **HbA1c Thresholds:** Normal (<5.7%), Prediabetes (5.7-6.4%), Diabetes (>=6.5%)
+        per ADA guidelines.
+
+        **Fasting Glucose Thresholds:** Normal (<100 mg/dL), Prediabetes (100-125 mg/dL),
+        Diabetes (>=126 mg/dL) per ADA guidelines.
+        """)
+
+    with st.expander("Input Requirements"):
+        st.write("""
+        - **No file upload needed** -- enter values directly
+        - **FINDRISC inputs:** Age, BMI, waist circumference, physical activity, diet,
+          medication history, blood glucose history, family history of diabetes
+        - **Lab values (optional):** HbA1c (%), Fasting glucose (mg/dL)
+        """)
+
+    with st.expander("Understanding Your Results"):
+        st.write("""
+        - **FINDRISC Score (0-26):** Low (<7), Slightly elevated (7-11), Moderate (12-14),
+          High (15-20), Very high (>20)
+        - **HbA1c Classification:** Normal, Prediabetes, or Diabetes per ADA criteria
+        - **Fasting Glucose Classification:** Normal, Prediabetes, or Diabetes per ADA criteria
+
+        Results combine all three assessments for a comprehensive screening overview.
+        """)
+
+    st.markdown("""
+    <div class="disclaimer">
+        <strong>⚠ Disclaimer:</strong> This tool is for educational and research purposes only.
+        It is not FDA-approved and should not be used as a substitute for professional medical diagnosis.
+        Always consult a qualified healthcare provider.
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.container():
         col1, col2, col3 = st.columns(3, gap="medium")
@@ -1688,7 +2009,7 @@ elif section == "Diabetes Screening":
                 },
             ))
             fig_findrisc.update_layout(height=320, margin=dict(t=60, b=20, l=30, r=30), paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter"))
-            st.plotly_chart(fig_findrisc, use_container_width=True)
+            st.plotly_chart(fig_findrisc, use_container_width=True, key="diabetes_findrisc_chart")
 
         with col_bar:
             contributions = {}
@@ -1716,7 +2037,7 @@ elif section == "Diabetes Screening":
                                  color_continuous_scale=["#d5f5e3", "#f39c12", "#e74c3c"])
             fig_contrib.update_layout(title=dict(text="Risk Factor Contributions", font=dict(size=16, family="Inter")),
                                       height=320, template="plotly_white", font=dict(family="Inter"), showlegend=False)
-            st.plotly_chart(fig_contrib, use_container_width=True)
+            st.plotly_chart(fig_contrib, use_container_width=True, key="diabetes_contrib_chart")
 
         st.markdown("---")
         with st.expander("Detailed Report - What Your Results Mean", expanded=True):
@@ -1737,6 +2058,52 @@ elif section == "Lipid Panel / CV Risk":
     st.button("← Back to Home", key="back_home_lipid", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Lipid Panel / CV Risk</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Lipid classification and 10-year ASCVD risk estimation using the Pooled Cohort Equations.</p>', unsafe_allow_html=True)
+
+    with st.expander("About This Module"):
+        st.write("""
+        Cardiovascular disease risk assessment is critical for preventive medicine. This module
+        classifies lipid panel values per ATP III guidelines and estimates 10-year atherosclerotic
+        cardiovascular disease (ASCVD) risk using the AHA/ACC Pooled Cohort Equations.
+        """)
+
+    with st.expander("How the Algorithm Works"):
+        st.write("""
+        **Algorithm:** ATP III lipid classification + Pooled Cohort Equations (PCE)
+
+        **Lipid Classification:** Total cholesterol, LDL, HDL, and triglycerides are classified
+        per NCEP ATP III guidelines into categories (Desirable, Borderline High, High, etc.).
+
+        **ASCVD Risk:** The Pooled Cohort Equations (AHA/ACC 2013 guidelines) estimate 10-year
+        risk of a first atherosclerotic cardiovascular event using age, sex, race, cholesterol,
+        HDL, blood pressure, diabetes status, and smoking status.
+
+        **Validation:** PCE were validated on multiple large US cohort studies.
+        """)
+
+    with st.expander("Input Requirements"):
+        st.write("""
+        - **No file upload needed** -- enter values directly
+        - **Lipid values:** Total cholesterol, LDL, HDL, Triglycerides (all in mg/dL)
+        - **Demographics:** Age, sex, race
+        - **Clinical factors:** Systolic blood pressure, blood pressure treatment status,
+          diabetes status, smoking status
+        """)
+
+    with st.expander("Understanding Your Results"):
+        st.write("""
+        - **Lipid classifications** are color-coded per ATP III categories
+        - **10-year ASCVD risk** is presented as a percentage:
+          - Low (<5%), Borderline (5-7.5%), Intermediate (7.5-20%), High (>=20%)
+        - Risk factor modification recommendations are provided based on the results.
+        """)
+
+    st.markdown("""
+    <div class="disclaimer">
+        <strong>⚠ Disclaimer:</strong> This tool is for educational and research purposes only.
+        It is not FDA-approved and should not be used as a substitute for professional medical diagnosis.
+        Always consult a qualified healthcare provider.
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.container():
         col1, col2, col3 = st.columns(3, gap="medium")
@@ -1832,7 +2199,7 @@ elif section == "Lipid Panel / CV Risk":
                 },
             ))
             fig_ascvd.update_layout(height=320, margin=dict(t=60, b=20, l=30, r=30), paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter"))
-            st.plotly_chart(fig_ascvd, use_container_width=True)
+            st.plotly_chart(fig_ascvd, use_container_width=True, key="lipid_ascvd_chart")
 
         with col_bar:
             lipid_names = ["Total Cholesterol", "LDL", "HDL", "Triglycerides"]
@@ -1844,7 +2211,7 @@ elif section == "Lipid Panel / CV Risk":
             )])
             fig_lipid.update_layout(title=dict(text="Lipid Panel Values", font=dict(size=16, family="Inter")),
                                     height=320, template="plotly_white", font=dict(family="Inter"), yaxis_title="mg/dL", showlegend=False)
-            st.plotly_chart(fig_lipid, use_container_width=True)
+            st.plotly_chart(fig_lipid, use_container_width=True, key="lipid_panel_chart")
 
         st.markdown("**Lipid Ratios**")
         rc1, rc2, rc3 = st.columns(3, gap="medium")
@@ -1891,6 +2258,54 @@ elif section == "Kidney Function":
     st.button("← Back to Home", key="back_home_kidney", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Kidney Function</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">CKD-EPI 2021 race-free eGFR estimation with KDIGO staging and risk classification.</p>', unsafe_allow_html=True)
+
+    with st.expander("About This Module"):
+        st.write("""
+        Chronic kidney disease (CKD) affects approximately 15% of adults. This module calculates
+        estimated Glomerular Filtration Rate (eGFR) using the CKD-EPI 2021 race-free equation
+        and provides KDIGO staging with albuminuria assessment. Optional Cystatin C comparison
+        is also available.
+        """)
+
+    with st.expander("How the Algorithm Works"):
+        st.write("""
+        **Algorithm:** CKD-EPI 2021 race-free equation for eGFR
+
+        **eGFR Calculation:** Uses serum creatinine, age, and sex to estimate kidney function.
+        The 2021 update removed the race coefficient for more equitable assessment.
+
+        **KDIGO Staging:** eGFR is mapped to CKD stages G1-G5 per KDIGO 2012 guidelines.
+
+        **Albuminuria Assessment:** Urine albumin-to-creatinine ratio (UACR) is classified
+        into stages A1-A3.
+
+        **Optional:** Cystatin C-based eGFR for comparison when available.
+        """)
+
+    with st.expander("Input Requirements"):
+        st.write("""
+        - **No file upload needed** -- enter values directly
+        - **Required:** Serum creatinine (mg/dL), Age (years), Sex
+        - **Optional:** UACR (mg/g) for albuminuria staging, BUN (mg/dL),
+          Cystatin C (mg/L) for comparison eGFR
+        """)
+
+    with st.expander("Understanding Your Results"):
+        st.write("""
+        - **eGFR (mL/min/1.73m2):** Higher is better. Normal is >= 90 with no kidney damage.
+        - **CKD Stages:** G1 (>=90, normal), G2 (60-89, mild), G3a (45-59), G3b (30-44),
+          G4 (15-29, severe), G5 (<15, kidney failure)
+        - **Albuminuria Stages:** A1 (<30, normal), A2 (30-300, moderate), A3 (>300, severe)
+        - The KDIGO risk matrix combines eGFR and albuminuria for overall risk classification.
+        """)
+
+    st.markdown("""
+    <div class="disclaimer">
+        <strong>⚠ Disclaimer:</strong> This tool is for educational and research purposes only.
+        It is not FDA-approved and should not be used as a substitute for professional medical diagnosis.
+        Always consult a qualified healthcare provider.
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.container():
         col1, col2, col3 = st.columns(3, gap="medium")
@@ -1972,7 +2387,7 @@ elif section == "Kidney Function":
                 },
             ))
             fig_egfr.update_layout(height=320, margin=dict(t=60, b=20, l=30, r=30), paper_bgcolor="rgba(0,0,0,0)", font=dict(family="Inter"))
-            st.plotly_chart(fig_egfr, use_container_width=True)
+            st.plotly_chart(fig_egfr, use_container_width=True, key="kidney_egfr_chart")
 
         with col_comp:
             if egfr_cysc is not None:
@@ -1983,7 +2398,7 @@ elif section == "Kidney Function":
                 )])
                 fig_comp.update_layout(title=dict(text="eGFR Comparison", font=dict(size=16, family="Inter")),
                                        height=320, template="plotly_white", font=dict(family="Inter"), yaxis_title="eGFR (mL/min/1.73m\u00b2)", showlegend=False)
-                st.plotly_chart(fig_comp, use_container_width=True)
+                st.plotly_chart(fig_comp, use_container_width=True, key="kidney_comparison_chart")
             else:
                 st.markdown("""
                 <div class="info-card">
@@ -2055,6 +2470,52 @@ elif section == "Lab Report Upload":
     st.button("← Back to Home", key="back_home_lab", on_click=navigate_to, args=("Home",))
     st.markdown('<p class="section-header">Lab Report Upload</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Upload a lab report PDF for automated parsing, or explore the demo report with color-coded analysis.</p>', unsafe_allow_html=True)
+
+    with st.expander("About This Module"):
+        st.write("""
+        Lab reports are a fundamental part of clinical diagnostics. This module accepts PDF
+        lab reports and uses automated parsing to extract common lab values, flagging
+        abnormalities against standard reference ranges. Useful for quickly digitizing and
+        reviewing lab results.
+        """)
+
+    with st.expander("How the Algorithm Works"):
+        st.write("""
+        **Algorithm:** PDF text extraction + regex pattern matching (not machine learning)
+
+        **Method:** The PDF is parsed for text content. Regex patterns are used to identify
+        common lab test names and their associated numeric values with units.
+
+        **Flagging:** Extracted values are compared against standard clinical reference ranges.
+        Abnormal values are flagged with color-coded badges (High, Low, Critical).
+
+        **Supported Tests:** CBC, BMP, CMP, lipid panel, thyroid panel, liver function,
+        and other common laboratory tests.
+        """)
+
+    with st.expander("Input Requirements"):
+        st.write("""
+        - **Accepted formats:** PDF
+        - **Expected content:** Standard laboratory report with test names, values, units, and reference ranges
+        - **Best results:** Machine-generated PDF reports (not scanned images)
+        - You can also use the built-in demo report to explore the feature.
+        """)
+
+    with st.expander("Understanding Your Results"):
+        st.write("""
+        - **Parsed Results tab:** Shows extracted lab values in a structured table with color-coded flags
+        - **Raw Text tab:** Shows the raw text extracted from the PDF
+        - **Color coding:** Green (Normal), Orange (High/Low), Red (Critical)
+        - Values that cannot be parsed are listed separately for manual review.
+        """)
+
+    st.markdown("""
+    <div class="disclaimer">
+        <strong>⚠ Disclaimer:</strong> This tool is for educational and research purposes only.
+        It is not FDA-approved and should not be used as a substitute for professional medical diagnosis.
+        Always consult a qualified healthcare provider.
+    </div>
+    """, unsafe_allow_html=True)
 
     uploaded_pdf = st.file_uploader("Upload Lab Report (PDF)", type=["pdf"], key="lab_pdf")
 
@@ -2164,7 +2625,7 @@ elif section == "Lab Report Upload":
                     text=[f"+{d}" if d > 0 else str(d) for d in abn_devs], textposition="outside",
                 )])
                 fig_abn.update_layout(height=320, template="plotly_white", font=dict(family="Inter"), yaxis_title="Deviation from Reference", showlegend=False)
-                st.plotly_chart(fig_abn, use_container_width=True)
+                st.plotly_chart(fig_abn, use_container_width=True, key="lab_abnormality_chart")
 
         st.markdown("---")
         with st.expander("Detailed Report - What Each Lab Value Means", expanded=False):
@@ -2185,9 +2646,107 @@ elif section == "Lab Report Upload":
 
     with tab_raw:
         if raw_text:
-            st.text_area("Raw Extracted Text", raw_text, height=400)
+            st.text_area("Raw Extracted Text", raw_text, height=400, key="lab_raw_text")
         else:
             st.info("Upload a PDF to see the raw extracted text.")
+
+
+# ============================================================
+# AI ASSISTANT SECTION
+# ============================================================
+elif section == "AI Assistant":
+    st.button("\u2190 Back to Home", key="back_home_ai", on_click=navigate_to, args=("Home",))
+    st.markdown('<p class="section-header">AI Assistant</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-sub">Ask questions about this portal\'s features, tools, and how to interpret results.</p>', unsafe_allow_html=True)
+
+    PORTAL_SYSTEM_PROMPT = """You are a helpful assistant for the Healthcare AI Prediction Portal.
+    The portal has 10 clinical AI modules:
+    1. Heart/ECG Analysis - 1D-CNN model, 99.5% accuracy, classifies 12-lead ECG recordings
+    2. Chest X-Ray Analysis - MobileNetV2 transfer learning, detects pneumonia vs normal
+    3. Health Risk Assessment - Random Forest, 83% accuracy, heart disease risk questionnaire
+    4. CBC Analysis - Clinical algorithm for complete blood count interpretation
+    5. Diabetes Screening - FINDRISC questionnaire + HbA1c/glucose thresholds
+    6. Lipid Panel/CV Risk - ATP III classification + Pooled Cohort ASCVD risk
+    7. Kidney Function - CKD-EPI 2021 race-free eGFR with KDIGO staging
+    8. Lab Report Upload - PDF parsing for automated lab value extraction
+    9. AI Assistant - This chat interface
+    10. Privacy & Compliance - HIPAA compliance information
+
+    You help users navigate the portal, understand results, and troubleshoot issues.
+    You do NOT provide medical advice. If asked medical questions, redirect to a healthcare provider.
+    Keep responses concise and helpful. Only answer questions about this portal."""
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    for msg in st.session_state.chat_history:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+
+    if prompt := st.chat_input("Ask me about the portal's features...", key="ai_chat_input"):
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.write(prompt)
+
+        # Try API-based response, fall back to keyword matching
+        response = None
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            try:
+                api_key = st.secrets.get("ANTHROPIC_API_KEY")
+            except Exception:
+                pass
+
+        if api_key:
+            try:
+                import anthropic
+                client = anthropic.Anthropic(api_key=api_key)
+                api_response = client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=512,
+                    system=PORTAL_SYSTEM_PROMPT,
+                    messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.chat_history],
+                )
+                response = api_response.content[0].text
+            except Exception:
+                pass
+
+        if not response:
+            # Keyword-based fallback
+            prompt_lower = prompt.lower()
+            if any(w in prompt_lower for w in ["ecg", "heart", "ekg", "arrhythmia"]):
+                response = "The **Heart / ECG Analysis** module uses a 1D-CNN model trained on 21,837 PTB-XL ECG recordings. It accepts CSV, DAT, HEA, or NPY files. Upload a 12-lead ECG or try the built-in sample data. The model classifies into 5 categories: Normal, ST/T Change, Conduction Disturbance, Hypertrophy, and MI."
+            elif any(w in prompt_lower for w in ["xray", "x-ray", "chest", "pneumonia", "lung"]):
+                response = "The **Chest X-Ray** module uses MobileNetV2 transfer learning trained on the NIH Chest X-ray14 dataset (112,120 images). Upload a frontal chest X-ray (PNG/JPEG) to get a pneumonia vs normal classification with confidence scores."
+            elif any(w in prompt_lower for w in ["risk", "questionnaire", "heart disease"]):
+                response = "The **Health Risk Assessment** is a step-by-step questionnaire that collects 13 clinical features (age, blood pressure, cholesterol, etc.) and uses a Random Forest model (83% accuracy) to estimate heart disease risk on a 0-100% scale."
+            elif any(w in prompt_lower for w in ["cbc", "blood count", "hemoglobin", "platelet", "wbc"]):
+                response = "The **CBC Analysis** module interprets complete blood count values using clinical reference ranges. Enter your WBC, RBC, hemoglobin, hematocrit, platelets, and differential counts. It flags abnormalities with color-coded badges."
+            elif any(w in prompt_lower for w in ["diabetes", "glucose", "hba1c", "findrisc", "sugar"]):
+                response = "The **Diabetes Screening** module uses the validated FINDRISC questionnaire plus HbA1c and fasting glucose thresholds. Enter your demographics, lab values, and lifestyle factors to get a diabetes risk score."
+            elif any(w in prompt_lower for w in ["lipid", "cholesterol", "ldl", "hdl", "triglyceride", "ascvd"]):
+                response = "The **Lipid Panel / CV Risk** module classifies lipid values per ATP III guidelines and estimates 10-year ASCVD risk using the AHA/ACC Pooled Cohort Equations. Enter your cholesterol panel and demographics."
+            elif any(w in prompt_lower for w in ["kidney", "egfr", "creatinine", "ckd", "renal"]):
+                response = "The **Kidney Function** module calculates eGFR using the CKD-EPI 2021 race-free equation with KDIGO staging. Enter serum creatinine, age, sex, and optionally Cystatin C for comparison."
+            elif any(w in prompt_lower for w in ["lab", "report", "pdf", "upload"]):
+                response = "The **Lab Report Upload** module accepts PDF lab reports. It uses regex parsing to extract common lab values and flags abnormalities against reference ranges. Upload any standard lab report PDF."
+            elif any(w in prompt_lower for w in ["privacy", "hipaa", "data", "security"]):
+                response = "Your privacy is our priority. All data is processed in real time and **never stored**. No accounts are required, and no personal data is collected. See the Privacy & Compliance page for full details."
+            elif any(w in prompt_lower for w in ["hello", "hi", "hey"]):
+                response = "Hello! I'm the Healthcare AI Portal assistant. I can help you navigate the portal, explain how modules work, or troubleshoot issues. What would you like to know?"
+            else:
+                response = "I can help you with any of the portal's 10 modules. Try asking about a specific module like 'How does the ECG analysis work?' or 'What format does the X-ray module accept?' For medical questions, please consult a healthcare provider."
+
+        st.session_state.chat_history.append({"role": "assistant", "content": response})
+        with st.chat_message("assistant"):
+            st.write(response)
+
+    st.markdown("""
+    <div class="disclaimer">
+        <strong>⚠ Note:</strong> This assistant provides information about portal features only.
+        It does not provide medical advice. Always consult a qualified healthcare provider for medical decisions.
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ============================================================
