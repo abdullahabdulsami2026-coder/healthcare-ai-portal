@@ -684,9 +684,10 @@ st.markdown("""
         line-height: 1.5;
     }
 
-    /* Module feature cards — enforce height */
-    .feature-card {
-        min-height: 360px !important;
+    /* Responsive grid for steps and benefits */
+    @media (max-width: 768px) {
+        .step-item { min-height: auto; }
+        .benefit-card { min-height: auto; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -873,60 +874,76 @@ if section == "Home":
     </div>
     """, unsafe_allow_html=True)
 
-    # How It Works Steps
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<p class="section-header">How It Works</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Get AI-powered clinical insights in four simple steps.</p>', unsafe_allow_html=True)
+    # How It Works Steps — rendered as single HTML grid for perfect alignment
+    st.markdown("""
+    <br>
+    <p class="section-header">How It Works</p>
+    <p class="section-sub">Get AI-powered clinical insights in four simple steps.</p>
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px;">
+        <div class="step-item">
+            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0077B6, #005F8C); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin: 0 auto 12px auto;">1</div>
+            <div style="font-size: 1.5rem; margin-bottom: 4px;">🔍</div>
+            <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #F1F5F9;">Browse Modules</h4>
+            <p style="font-size: 0.85rem; color: #94A3B8; margin: 0;">Explore our 10 clinical AI tools below</p>
+        </div>
+        <div class="step-item">
+            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0077B6, #005F8C); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin: 0 auto 12px auto;">2</div>
+            <div style="font-size: 1.5rem; margin-bottom: 4px;">👆</div>
+            <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #F1F5F9;">Select a Module</h4>
+            <p style="font-size: 0.85rem; color: #94A3B8; margin: 0;">Click 'Open' on any module to get started</p>
+        </div>
+        <div class="step-item">
+            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0077B6, #005F8C); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin: 0 auto 12px auto;">3</div>
+            <div style="font-size: 1.5rem; margin-bottom: 4px;">📤</div>
+            <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #F1F5F9;">Upload or Try Samples</h4>
+            <p style="font-size: 0.85rem; color: #94A3B8; margin: 0;">Provide your data or use built-in sample datasets</p>
+        </div>
+        <div class="step-item">
+            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0077B6, #005F8C); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin: 0 auto 12px auto;">4</div>
+            <div style="font-size: 1.5rem; margin-bottom: 4px;">📊</div>
+            <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #F1F5F9;">View Results</h4>
+            <p style="font-size: 0.85rem; color: #94A3B8; margin: 0;">Get AI predictions with visual explanations instantly</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    step_cols = st.columns(4, gap="medium")
-    steps = [
-        ("1", "🔍", "Browse Modules", "Explore our 10 clinical AI tools below"),
-        ("2", "👆", "Select a Module", "Click 'Open' on any module to get started"),
-        ("3", "📤", "Upload or Try Samples", "Provide your data or use built-in sample datasets"),
-        ("4", "📊", "View Results", "Get AI predictions with visual explanations instantly"),
-    ]
-    for col, (num, icon, title, desc) in zip(step_cols, steps):
-        with col:
-            st.markdown(f"""
-            <div class="step-item">
-                <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0077B6, #005F8C); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin: 0 auto 12px auto;">
-                    {num}
-                </div>
-                <div style="font-size: 1.5rem; margin-bottom: 4px;">{icon}</div>
-                <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #F1F5F9;">{title}</h4>
-                <p style="font-size: 0.85rem; color: #94A3B8; margin: 0;">{desc}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<p class="section-header">Why Use This Portal?</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Built for students, researchers, and clinicians who want to explore AI in healthcare.</p>', unsafe_allow_html=True)
-
-    benefits = [
-        ("⚡", "Free & Instant", "All 10 clinical AI tools are completely free with no registration required. Get results in seconds."),
-        ("🔬", "Research-Grade Models", "Built on peer-reviewed ML architectures including CNNs, transfer learning, and ensemble methods with published accuracy metrics."),
-        ("🧪", "Try Before You Upload", "Every module includes built-in sample data so you can explore and understand the tools before using your own data."),
-        ("📖", "Educational & Transparent", "Each tool explains how its AI model works, what the results mean, and what the limitations are."),
-        ("🔒", "Privacy First", "Your uploaded data is processed in real time and never stored. No accounts, no data collection, no tracking."),
-        ("🩺", "Clinically Relevant", "Modules cover cardiology, radiology, hematology, nephrology, endocrinology, and more."),
-    ]
-
-    for row_start in range(0, len(benefits), 3):
-        cols = st.columns(3, gap="medium")
-        for i, col in enumerate(cols):
-            idx = row_start + i
-            if idx < len(benefits):
-                icon, title, desc = benefits[idx]
-                with col:
-                    st.markdown(f"""
-                    <div class="benefit-card">
-                        <div style="font-size: 1.5rem; margin-bottom: 8px;">{icon}</div>
-                        <h4>{title}</h4>
-                        <p>{desc}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
+    # Why Use This Portal — rendered as single HTML grid for perfect alignment
+    st.markdown("""
+    <p class="section-header">Why Use This Portal?</p>
+    <p class="section-sub">Built for students, researchers, and clinicians who want to explore AI in healthcare.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px;">
+        <div class="benefit-card">
+            <div style="font-size: 1.5rem; margin-bottom: 8px;">⚡</div>
+            <h4>Free &amp; Instant</h4>
+            <p>All 10 clinical AI tools are completely free with no registration required. Get results in seconds.</p>
+        </div>
+        <div class="benefit-card">
+            <div style="font-size: 1.5rem; margin-bottom: 8px;">🔬</div>
+            <h4>Research-Grade Models</h4>
+            <p>Built on peer-reviewed ML architectures including CNNs, transfer learning, and ensemble methods with published accuracy metrics.</p>
+        </div>
+        <div class="benefit-card">
+            <div style="font-size: 1.5rem; margin-bottom: 8px;">🧪</div>
+            <h4>Try Before You Upload</h4>
+            <p>Every module includes built-in sample data so you can explore and understand the tools before using your own data.</p>
+        </div>
+        <div class="benefit-card">
+            <div style="font-size: 1.5rem; margin-bottom: 8px;">📖</div>
+            <h4>Educational &amp; Transparent</h4>
+            <p>Each tool explains how its AI model works, what the results mean, and what the limitations are.</p>
+        </div>
+        <div class="benefit-card">
+            <div style="font-size: 1.5rem; margin-bottom: 8px;">🔒</div>
+            <h4>Privacy First</h4>
+            <p>Your uploaded data is processed in real time and never stored. No accounts, no data collection, no tracking.</p>
+        </div>
+        <div class="benefit-card">
+            <div style="font-size: 1.5rem; margin-bottom: 8px;">🩺</div>
+            <h4>Clinically Relevant</h4>
+            <p>Modules cover cardiology, radiology, hematology, nephrology, endocrinology, and more.</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     CARD_DATA = [
         ("Heart / ECG", "icon-ecg", "❤️", "Heart / ECG Analysis",
@@ -954,11 +971,14 @@ if section == "Home":
             if idx < len(CARD_DATA):
                 nav_key, icon_cls, emoji, title, desc, tag = CARD_DATA[idx]
                 with col:
+                    # Fixed-height card HTML so buttons align across columns
                     st.markdown(f"""
-                    <div class="feature-card">
-                        <div class="feature-icon {icon_cls}">{emoji}</div>
-                        <h3>{title}</h3>
-                        <p>{desc}</p>
+                    <div style="background: #1E293B; border-radius: 16px; padding: 28px 24px; border: 1px solid #334155; height: 280px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: all 0.3s ease; margin-bottom: 8px;">
+                        <div>
+                            <div class="feature-icon {icon_cls}">{emoji}</div>
+                            <h3 style="font-size: 1.1rem; font-weight: 700; color: #F1F5F9; margin: 0 0 8px 0;">{title}</h3>
+                            <p style="color: #94A3B8; font-size: 0.88rem; line-height: 1.55; margin: 0;">{desc}</p>
+                        </div>
                         <span class="feature-tag">{tag}</span>
                     </div>
                     """, unsafe_allow_html=True)
