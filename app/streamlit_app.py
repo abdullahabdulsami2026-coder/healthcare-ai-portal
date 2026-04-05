@@ -17,6 +17,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import plotly.io as pio
 import streamlit as st
+import streamlit.components.v1 as components
 
 pio.templates.default = "plotly_dark"
 
@@ -438,6 +439,87 @@ st.markdown("""
         border-color: #334155 !important;
     }
 
+    /* Sidebar collapse arrow (visible inside sidebar when open) */
+    [data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stSidebar"] button[kind="header"] {
+        background: #0077B6 !important;
+        color: #FFFFFF !important;
+        border-radius: 8px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"] button svg,
+    [data-testid="stSidebar"] button[kind="header"] svg {
+        color: #FFFFFF !important;
+        fill: #FFFFFF !important;
+    }
+
+    /* Sidebar EXPAND arrow (visible when sidebar is collapsed) — make prominent.
+       Cover all Streamlit version selectors for the collapsed control. */
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapseButton"],
+    div[data-testid="stSidebarCollapsedControl"],
+    section[data-testid="stSidebar"][aria-expanded="false"] + div button[kind="header"],
+    button[data-testid="baseButton-headerNoPadding"] {
+        background: #0077B6 !important;
+        border-radius: 0 10px 10px 0 !important;
+        padding: 10px 10px !important;
+        box-shadow: 2px 2px 12px rgba(0,0,0,0.5) !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        top: 16px !important;
+        left: 0 !important;
+        z-index: 999999 !important;
+        position: fixed !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+    }
+    [data-testid="stSidebarCollapsedControl"]:hover,
+    [data-testid="collapsedControl"]:hover {
+        background: #0096D6 !important;
+        transform: translateX(2px);
+        transition: all 0.2s ease;
+    }
+    [data-testid="stSidebarCollapsedControl"] button,
+    [data-testid="collapsedControl"] button {
+        background: transparent !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        padding: 0 !important;
+    }
+    [data-testid="stSidebarCollapsedControl"] svg,
+    [data-testid="collapsedControl"] svg,
+    button[data-testid="baseButton-headerNoPadding"] svg {
+        color: #FFFFFF !important;
+        fill: #FFFFFF !important;
+        stroke: #FFFFFF !important;
+        width: 24px !important;
+        height: 24px !important;
+    }
+
+    /* Fallback: custom floating "Open Menu" button when sidebar is collapsed.
+       Shows only when the sidebar section has aria-expanded="false". */
+    body:has(section[data-testid="stSidebar"][aria-expanded="false"])::before {
+        content: "☰ Menu";
+        position: fixed;
+        top: 14px;
+        left: 12px;
+        background: #0077B6;
+        color: #FFFFFF;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-family: "Inter", sans-serif;
+        font-weight: 700;
+        font-size: 0.95rem;
+        box-shadow: 2px 2px 14px rgba(0,0,0,0.5);
+        z-index: 999998;
+        pointer-events: none;
+    }
+
     /* Button Styling */
     .stButton > button {
         background: #0077B6 !important;
@@ -807,31 +889,18 @@ with st.sidebar:
 
 
 # ============================================================
-# Browser back/forward — inject JS into main page via st.markdown
+# Browser back/forward — use components.html so JS actually executes
 # ============================================================
-_current_slug = _NAV_TO_SLUG.get(section, "home")
-st.markdown(f"""
-<script>
-    // Push browser history entry for current page
-    (function() {{
-        const slug = "{_current_slug}";
-        const targetSearch = slug === "home" ? "" : "?page=" + slug;
-        const currentSearch = window.location.search;
-        if (currentSearch !== targetSearch) {{
-            const newUrl = slug === "home" ? window.location.pathname : window.location.pathname + "?page=" + slug;
-            window.history.pushState({{page: slug}}, "", newUrl);
-        }}
-        // Listen for back/forward
-        if (!window._healthcarePopstateSet) {{
-            window._healthcarePopstateSet = true;
-            window.addEventListener("popstate", function(e) {{
-                // Reload page so Streamlit re-reads URL params
-                window.location.reload();
-            }});
-        }}
-    }})();
-</script>
-""", unsafe_allow_html=True)
+components.html(
+    """
+    <script>
+        window.parent.addEventListener("popstate", function() {
+            window.parent.location.reload();
+        });
+    </script>
+    """,
+    height=0,
+)
 
 # ============================================================
 # HOME SECTION
