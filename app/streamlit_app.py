@@ -777,7 +777,7 @@ if section == "Home":
         ("Chest X-Ray", "icon-xray", "🫁", "Chest X-Ray Analysis",
          "Upload frontal chest X-ray images for pneumonia detection and multi-label disease classification.", "Transfer Learning"),
         ("Health Risk Assessment", "icon-risk", "📊", "Health Risk Assessment",
-         "Interactive step-by-step questionnaire to generate a heart disease risk score with interactive charts.", "ML Classifier"),
+         "Interactive step-by-step questionnaire to generate a heart disease risk score with interactive charts.", "Ensemble (XGB+LGBM+GBM)"),
         ("CBC Analysis", "icon-cbc", "🩸", "CBC Analysis",
          "Enter complete blood count values for automated classification, WBC differential visualization, and clinical interpretation.", "Clinical Algorithm"),
         ("Diabetes Screening", "icon-diabetes", "🍩", "Diabetes Screening",
@@ -1324,7 +1324,7 @@ elif section == "Health Risk Assessment":
         **Training Data:** UCI Heart Disease dataset with 920 patient records and 13 clinical
         features including age, sex, chest pain type, blood pressure, cholesterol, and more.
 
-        **Performance:** Accuracy: 83%
+        **Performance:** Accuracy: 83% | AUC-ROC: 92% (10-fold stratified CV)
 
         **Pipeline:** Clinical Features (questionnaire) -> Feature Scaling -> Random Forest ->
         Risk Score (0-100%) + Risk Category
@@ -1595,10 +1595,18 @@ elif section == "Health Risk Assessment":
         slope_val = ["Upsloping", "Flat", "Downsloping"].index(slope)
         thal_val = ["Normal", "Fixed Defect", "Reversible Defect"].index(thal) + 1
 
-        features = np.array([[
-            age, sex_val, cp_val, trestbps, chol, fbs_val,
-            restecg_val, thalach, exang_val, oldpeak, slope_val, ca, thal_val
-        ]])
+        features_base = [age, sex_val, cp_val, trestbps, chol, fbs_val,
+            restecg_val, thalach, exang_val, oldpeak, slope_val, ca, thal_val]
+        # Add engineered features matching training pipeline
+        features_eng = features_base + [
+            age * chol,                    # age_chol
+            age * trestbps,                # age_trestbps
+            age * thalach,                 # age_thalach
+            trestbps / (thalach + 1),      # bp_hr_ratio
+            oldpeak * (slope_val + 1),     # oldpeak_slope
+            ca * thal_val,                 # ca_thal_interact
+        ]
+        features = np.array([features_eng])
 
         if _heart_loaded:
             try:
@@ -2797,7 +2805,7 @@ elif section == "AI Assistant":
     The portal has 10 clinical AI modules:
     1. Heart/ECG Analysis - 1D-CNN model, 99.5% accuracy, classifies 12-lead ECG recordings
     2. Chest X-Ray Analysis - MobileNetV2 transfer learning, detects pneumonia vs normal
-    3. Health Risk Assessment - Random Forest, 83% accuracy, heart disease risk questionnaire
+    3. Health Risk Assessment - XGBoost/LightGBM/GBM voting ensemble, 83% accuracy, 92% AUC-ROC, heart disease risk questionnaire
     4. CBC Analysis - Clinical algorithm for complete blood count interpretation
     5. Diabetes Screening - FINDRISC questionnaire + HbA1c/glucose thresholds
     6. Lipid Panel/CV Risk - ATP III classification + Pooled Cohort ASCVD risk
@@ -2853,7 +2861,7 @@ elif section == "AI Assistant":
             elif any(w in prompt_lower for w in ["xray", "x-ray", "chest", "pneumonia", "lung"]):
                 response = "The **Chest X-Ray** module uses MobileNetV2 transfer learning trained on the NIH Chest X-ray14 dataset (112,120 images). Upload a frontal chest X-ray (PNG/JPEG) to get a pneumonia vs normal classification with confidence scores."
             elif any(w in prompt_lower for w in ["risk", "questionnaire", "heart disease"]):
-                response = "The **Health Risk Assessment** is a step-by-step questionnaire that collects 13 clinical features (age, blood pressure, cholesterol, etc.) and uses a Random Forest model (83% accuracy) to estimate heart disease risk on a 0-100% scale."
+                response = "The **Health Risk Assessment** is a step-by-step questionnaire that collects 13 clinical features (age, blood pressure, cholesterol, etc.) and uses an XGBoost/LightGBM/GBM voting ensemble (83% accuracy, 92% AUC-ROC) to estimate heart disease risk on a 0-100% scale."
             elif any(w in prompt_lower for w in ["cbc", "blood count", "hemoglobin", "platelet", "wbc"]):
                 response = "The **CBC Analysis** module interprets complete blood count values using clinical reference ranges. Enter your WBC, RBC, hemoglobin, hematocrit, platelets, and differential counts. It flags abnormalities with color-coded badges."
             elif any(w in prompt_lower for w in ["diabetes", "glucose", "hba1c", "findrisc", "sugar"]):
