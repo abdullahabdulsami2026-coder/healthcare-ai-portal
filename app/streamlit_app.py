@@ -851,8 +851,14 @@ if section == "Home":
 # ============================================================
 elif section == "Heart / ECG":
     st.button("← Back to Home", key="back_home_ecg", on_click=navigate_to, args=("Home",))
+    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Heart / ECG Analysis</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Heart / ECG Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Upload a 12-lead ECG recording, try a sample, or explore the demo analysis.</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+        <strong>Quick Start:</strong> 1️⃣ Upload your ECG file or try sample data → 2️⃣ Click Analyze → 3️⃣ View arrhythmia classification
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.expander("About This Module"):
         st.write("""
@@ -1095,14 +1101,30 @@ elif section == "Heart / ECG":
         fig_p.update_layout(height=260, template="plotly_white", font=dict(family="Inter"), showlegend=False)
         st.plotly_chart(fig_p, use_container_width=True, key="ecg_demo_probability")
 
+    st.markdown("---")
+    st.markdown("##### Explore More Modules")
+    sug_cols = st.columns(3, gap="medium")
+    with sug_cols[0]:
+        st.button("Chest X-Ray Analysis →", key="suggest_ecg_to_xray", on_click=navigate_to, args=("Chest X-Ray",), use_container_width=True)
+    with sug_cols[1]:
+        st.button("Health Risk Assessment →", key="suggest_ecg_to_hra", on_click=navigate_to, args=("Health Risk Assessment",), use_container_width=True)
+    with sug_cols[2]:
+        st.button("CBC Analysis →", key="suggest_ecg_to_cbc", on_click=navigate_to, args=("CBC Analysis",), use_container_width=True)
+
 
 # ============================================================
 # CHEST X-RAY SECTION
 # ============================================================
 elif section == "Chest X-Ray":
     st.button("← Back to Home", key="back_home_xray", on_click=navigate_to, args=("Home",))
+    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Chest X-Ray Analysis</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Chest X-Ray Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Upload a frontal chest X-ray, try a sample image, or view a demo prediction.</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+        <strong>Quick Start:</strong> 1️⃣ Upload a chest X-ray image or try sample data → 2️⃣ Click Analyze → 3️⃣ View pneumonia detection results
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.expander("About This Module"):
         st.write("""
@@ -1262,14 +1284,30 @@ elif section == "Chest X-Ray":
         else:
             st.info("No sample X-ray files found. Sample data will be available after running the data generation scripts.")
 
+    st.markdown("---")
+    st.markdown("##### Explore More Modules")
+    sug_cols = st.columns(3, gap="medium")
+    with sug_cols[0]:
+        st.button("Heart / ECG Analysis →", key="suggest_xray_to_ecg", on_click=navigate_to, args=("Heart / ECG",), use_container_width=True)
+    with sug_cols[1]:
+        st.button("Health Risk Assessment →", key="suggest_xray_to_hra", on_click=navigate_to, args=("Health Risk Assessment",), use_container_width=True)
+    with sug_cols[2]:
+        st.button("Lab Report Upload →", key="suggest_xray_to_lab", on_click=navigate_to, args=("Lab Report Upload",), use_container_width=True)
+
 
 # ============================================================
 # HEALTH RISK ASSESSMENT — Step-by-Step Questionnaire
 # ============================================================
 elif section == "Health Risk Assessment":
     st.button("← Back to Home", key="back_home_hra", on_click=navigate_to, args=("Home",))
+    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Health Risk Assessment</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Health Risk Assessment</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Answer a few questions one step at a time to generate your heart disease risk prediction.</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+        <strong>Quick Start:</strong> 1️⃣ Answer the health questionnaire → 2️⃣ Click Predict → 3️⃣ View your heart disease risk score
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.expander("About This Module"):
         st.write("""
@@ -1662,14 +1700,30 @@ elif section == "Health Risk Assessment":
                 predicted, risk_score, age, sex, cp, trestbps, chol, thalach, oldpeak, ca
             ))
 
+    st.markdown("---")
+    st.markdown("##### Explore More Modules")
+    sug_cols = st.columns(3, gap="medium")
+    with sug_cols[0]:
+        st.button("Heart / ECG Analysis →", key="suggest_hra_to_ecg", on_click=navigate_to, args=("Heart / ECG",), use_container_width=True)
+    with sug_cols[1]:
+        st.button("Lipid Panel / CV Risk →", key="suggest_hra_to_lipid", on_click=navigate_to, args=("Lipid Panel / CV Risk",), use_container_width=True)
+    with sug_cols[2]:
+        st.button("Diabetes Screening →", key="suggest_hra_to_diabetes", on_click=navigate_to, args=("Diabetes Screening",), use_container_width=True)
+
 
 # ============================================================
 # CBC ANALYSIS SECTION
 # ============================================================
 elif section == "CBC Analysis":
     st.button("← Back to Home", key="back_home_cbc", on_click=navigate_to, args=("Home",))
+    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>CBC Analysis</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">CBC Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Enter complete blood count values for automated classification, differential visualization, and clinical interpretation.</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+        <strong>Quick Start:</strong> 1️⃣ Enter your blood count values → 2️⃣ Click Analyze → 3️⃣ View flagged abnormalities
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.expander("About This Module"):
         st.write("""
@@ -1862,14 +1916,30 @@ elif section == "CBC Analysis":
         </div>
         """, unsafe_allow_html=True)
 
+    st.markdown("---")
+    st.markdown("##### Explore More Modules")
+    sug_cols = st.columns(3, gap="medium")
+    with sug_cols[0]:
+        st.button("Diabetes Screening →", key="suggest_cbc_to_diabetes", on_click=navigate_to, args=("Diabetes Screening",), use_container_width=True)
+    with sug_cols[1]:
+        st.button("Kidney Function →", key="suggest_cbc_to_kidney", on_click=navigate_to, args=("Kidney Function",), use_container_width=True)
+    with sug_cols[2]:
+        st.button("Lab Report Upload →", key="suggest_cbc_to_lab", on_click=navigate_to, args=("Lab Report Upload",), use_container_width=True)
+
 
 # ============================================================
 # DIABETES SCREENING SECTION
 # ============================================================
 elif section == "Diabetes Screening":
     st.button("← Back to Home", key="back_home_diabetes", on_click=navigate_to, args=("Home",))
+    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Diabetes Screening</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Diabetes Screening</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Comprehensive diabetes risk assessment using HbA1c, fasting glucose, and the FINDRISC questionnaire.</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+        <strong>Quick Start:</strong> 1️⃣ Enter your HbA1c, glucose, and demographics → 2️⃣ Click Screen → 3️⃣ View your diabetes risk
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.expander("About This Module"):
         st.write("""
@@ -2050,14 +2120,30 @@ elif section == "Diabetes Screening":
         </div>
         """, unsafe_allow_html=True)
 
+    st.markdown("---")
+    st.markdown("##### Explore More Modules")
+    sug_cols = st.columns(3, gap="medium")
+    with sug_cols[0]:
+        st.button("CBC Analysis →", key="suggest_diabetes_to_cbc", on_click=navigate_to, args=("CBC Analysis",), use_container_width=True)
+    with sug_cols[1]:
+        st.button("Lipid Panel / CV Risk →", key="suggest_diabetes_to_lipid", on_click=navigate_to, args=("Lipid Panel / CV Risk",), use_container_width=True)
+    with sug_cols[2]:
+        st.button("Health Risk Assessment →", key="suggest_diabetes_to_hra", on_click=navigate_to, args=("Health Risk Assessment",), use_container_width=True)
+
 
 # ============================================================
 # LIPID PANEL / CV RISK SECTION
 # ============================================================
 elif section == "Lipid Panel / CV Risk":
     st.button("← Back to Home", key="back_home_lipid", on_click=navigate_to, args=("Home",))
+    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lipid Panel / CV Risk</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Lipid Panel / CV Risk</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Lipid classification and 10-year ASCVD risk estimation using the Pooled Cohort Equations.</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+        <strong>Quick Start:</strong> 1️⃣ Enter your cholesterol panel → 2️⃣ Click Assess Risk → 3️⃣ View ASCVD risk and lipid classification
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.expander("About This Module"):
         st.write("""
@@ -2250,14 +2336,30 @@ elif section == "Lipid Panel / CV Risk":
         </div>
         """, unsafe_allow_html=True)
 
+    st.markdown("---")
+    st.markdown("##### Explore More Modules")
+    sug_cols = st.columns(3, gap="medium")
+    with sug_cols[0]:
+        st.button("Diabetes Screening →", key="suggest_lipid_to_diabetes", on_click=navigate_to, args=("Diabetes Screening",), use_container_width=True)
+    with sug_cols[1]:
+        st.button("Health Risk Assessment →", key="suggest_lipid_to_hra", on_click=navigate_to, args=("Health Risk Assessment",), use_container_width=True)
+    with sug_cols[2]:
+        st.button("Kidney Function →", key="suggest_lipid_to_kidney", on_click=navigate_to, args=("Kidney Function",), use_container_width=True)
+
 
 # ============================================================
 # KIDNEY FUNCTION SECTION
 # ============================================================
 elif section == "Kidney Function":
     st.button("← Back to Home", key="back_home_kidney", on_click=navigate_to, args=("Home",))
+    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Kidney Function</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Kidney Function</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">CKD-EPI 2021 race-free eGFR estimation with KDIGO staging and risk classification.</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+        <strong>Quick Start:</strong> 1️⃣ Enter serum creatinine and demographics → 2️⃣ Click Calculate → 3️⃣ View eGFR and CKD staging
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.expander("About This Module"):
         st.write("""
@@ -2462,14 +2564,30 @@ elif section == "Kidney Function":
         </div>
         """, unsafe_allow_html=True)
 
+    st.markdown("---")
+    st.markdown("##### Explore More Modules")
+    sug_cols = st.columns(3, gap="medium")
+    with sug_cols[0]:
+        st.button("CBC Analysis →", key="suggest_kidney_to_cbc", on_click=navigate_to, args=("CBC Analysis",), use_container_width=True)
+    with sug_cols[1]:
+        st.button("Lipid Panel / CV Risk →", key="suggest_kidney_to_lipid", on_click=navigate_to, args=("Lipid Panel / CV Risk",), use_container_width=True)
+    with sug_cols[2]:
+        st.button("Lab Report Upload →", key="suggest_kidney_to_lab", on_click=navigate_to, args=("Lab Report Upload",), use_container_width=True)
+
 
 # ============================================================
 # LAB REPORT UPLOAD SECTION
 # ============================================================
 elif section == "Lab Report Upload":
     st.button("← Back to Home", key="back_home_lab", on_click=navigate_to, args=("Home",))
+    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lab Report Upload</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Lab Report Upload</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Upload a lab report PDF for automated parsing, or explore the demo report with color-coded analysis.</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+        <strong>Quick Start:</strong> 1️⃣ Upload a PDF lab report → 2️⃣ Parsing happens automatically → 3️⃣ View flagged abnormal values
+    </div>
+    """, unsafe_allow_html=True)
 
     with st.expander("About This Module"):
         st.write("""
@@ -2650,14 +2768,30 @@ elif section == "Lab Report Upload":
         else:
             st.info("Upload a PDF to see the raw extracted text.")
 
+    st.markdown("---")
+    st.markdown("##### Explore More Modules")
+    sug_cols = st.columns(3, gap="medium")
+    with sug_cols[0]:
+        st.button("CBC Analysis →", key="suggest_lab_to_cbc", on_click=navigate_to, args=("CBC Analysis",), use_container_width=True)
+    with sug_cols[1]:
+        st.button("Kidney Function →", key="suggest_lab_to_kidney", on_click=navigate_to, args=("Kidney Function",), use_container_width=True)
+    with sug_cols[2]:
+        st.button("Diabetes Screening →", key="suggest_lab_to_diabetes", on_click=navigate_to, args=("Diabetes Screening",), use_container_width=True)
+
 
 # ============================================================
 # AI ASSISTANT SECTION
 # ============================================================
 elif section == "AI Assistant":
     st.button("\u2190 Back to Home", key="back_home_ai", on_click=navigate_to, args=("Home",))
+    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>AI Assistant</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">AI Assistant</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Ask questions about this portal\'s features, tools, and how to interpret results.</p>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+        <strong>Quick Start:</strong> 1️⃣ Type your question below → 2️⃣ The assistant will help you navigate the portal
+    </div>
+    """, unsafe_allow_html=True)
 
     PORTAL_SYSTEM_PROMPT = """You are a helpful assistant for the Healthcare AI Prediction Portal.
     The portal has 10 clinical AI modules:
@@ -2754,6 +2888,7 @@ elif section == "AI Assistant":
 # ============================================================
 elif section == "Privacy & Compliance":
     st.button("← Back to Home", key="back_home_privacy", on_click=navigate_to, args=("Home",))
+    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Privacy & Compliance</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Privacy & HIPAA Compliance</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Information about data handling, privacy practices, and regulatory compliance.</p>', unsafe_allow_html=True)
 
