@@ -17,6 +17,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import plotly.io as pio
 import streamlit as st
+import streamlit.components.v1 as components
 
 pio.templates.default = "plotly_dark"
 
@@ -626,8 +627,85 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+
+    /* Card grid alignment — force all Streamlit columns to stretch equally */
+    [data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        align-items: stretch !important;
+    }
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Steps cards */
+    .step-item {
+        text-align: center;
+        padding: 20px 12px;
+        background: #1E293B;
+        border: 1px solid #334155;
+        border-radius: 14px;
+        min-height: 180px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        height: 100%;
+    }
+
+    /* Benefit cards */
+    .benefit-card {
+        background: #1E293B;
+        border-radius: 14px;
+        padding: 22px 24px;
+        border: 1px solid #334155;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        height: 100%;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .benefit-card h4 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #F1F5F9;
+        margin: 0 0 6px 0;
+    }
+    .benefit-card p {
+        font-size: 0.85rem;
+        color: #94A3B8;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    /* Module feature cards — enforce height */
+    .feature-card {
+        min-height: 360px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# ============================================================
+# Browser back/forward — popstate listener
+# ============================================================
+components.html("""
+<script>
+    // Listen for browser back/forward button
+    if (!window._popstateListenerAdded) {
+        window._popstateListenerAdded = true;
+        window.addEventListener('popstate', function(event) {
+            // Reload the page so Streamlit re-reads query params from the URL
+            window.location.reload();
+        });
+    }
+</script>
+""", height=0)
 
 # ============================================================
 # Navigation — URL-based with query_params for browser back/forward
@@ -649,8 +727,26 @@ _SLUG_TO_NAV = {
 _NAV_TO_SLUG = {v: k for k, v in _SLUG_TO_NAV.items()}
 
 
+def _push_history(slug):
+    """Inject JS to push a real browser history entry."""
+    if slug == "home":
+        url = "?"
+    else:
+        url = f"?page={slug}"
+    components.html(f"""
+    <script>
+        const url = "{url}";
+        if (window.parent.location.search !== url && url !== "?") {{
+            window.parent.history.pushState({{page: "{slug}"}}, "", url);
+        }} else if (url === "?" && window.parent.location.search !== "") {{
+            window.parent.history.pushState({{page: "home"}}, "", window.parent.location.pathname);
+        }}
+    </script>
+    """, height=0)
+
+
 def navigate_to(section_name):
-    """Navigate to a section by updating query params (enables browser back/forward)."""
+    """Navigate to a section with browser history support."""
     if section_name in NAV_OPTIONS:
         slug = _NAV_TO_SLUG.get(section_name, "home")
         if slug == "home":
@@ -658,6 +754,7 @@ def navigate_to(section_name):
         else:
             st.query_params["page"] = slug
         st.session_state.nav_radio = section_name
+        st.session_state._push_slug = slug
 
 
 # Sync session state from URL on page load (handles browser back/forward)
@@ -702,6 +799,7 @@ with st.sidebar:
             st.query_params.clear()
         else:
             st.query_params["page"] = slug
+        st.session_state._push_slug = slug
 
     section = st.radio(
         "Navigation",
@@ -745,6 +843,17 @@ with st.sidebar:
 
 
 # ============================================================
+# Push browser history for current page
+# ============================================================
+_current_slug = _NAV_TO_SLUG.get(section, "home")
+if hasattr(st.session_state, '_push_slug'):
+    _push_history(st.session_state._push_slug)
+    del st.session_state._push_slug
+else:
+    # Ensure URL matches current section on every render
+    _push_history(_current_slug)
+
+# ============================================================
 # HOME SECTION
 # ============================================================
 if section == "Home":
@@ -779,7 +888,7 @@ if section == "Home":
     for col, (num, icon, title, desc) in zip(step_cols, steps):
         with col:
             st.markdown(f"""
-            <div style="text-align: center; padding: 20px 12px; background: #1E293B; border: 1px solid #334155; border-radius: 14px; height: 100%;">
+            <div class="step-item">
                 <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0077B6, #005F8C); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin: 0 auto 12px auto;">
                     {num}
                 </div>
@@ -810,7 +919,7 @@ if section == "Home":
                 icon, title, desc = benefits[idx]
                 with col:
                     st.markdown(f"""
-                    <div class="info-card" style="min-height: 140px;">
+                    <div class="benefit-card">
                         <div style="font-size: 1.5rem; margin-bottom: 8px;">{icon}</div>
                         <h4>{title}</h4>
                         <p>{desc}</p>
