@@ -630,21 +630,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
-# Session State Initialization
-# ============================================================
-if "nav_radio" not in st.session_state:
-    st.session_state.nav_radio = "Home"
-
-# Health Risk questionnaire step tracking
-if "hra_step" not in st.session_state:
-    st.session_state.hra_step = 1
-if "hra_data" not in st.session_state:
-    st.session_state.hra_data = {}
-if "hra_submitted" not in st.session_state:
-    st.session_state.hra_submitted = False
-
-# ============================================================
-# Navigation
+# Navigation — URL-based with query_params for browser back/forward
 # ============================================================
 NAV_OPTIONS = [
     "Home", "Heart / ECG", "Chest X-Ray", "Health Risk Assessment",
@@ -652,10 +638,47 @@ NAV_OPTIONS = [
     "Kidney Function", "Lab Report Upload", "AI Assistant", "Privacy & Compliance",
 ]
 
+# Slug mapping: URL param <-> display name
+_SLUG_TO_NAV = {
+    "home": "Home", "ecg": "Heart / ECG", "xray": "Chest X-Ray",
+    "risk": "Health Risk Assessment", "cbc": "CBC Analysis",
+    "diabetes": "Diabetes Screening", "lipid": "Lipid Panel / CV Risk",
+    "kidney": "Kidney Function", "lab": "Lab Report Upload",
+    "assistant": "AI Assistant", "privacy": "Privacy & Compliance",
+}
+_NAV_TO_SLUG = {v: k for k, v in _SLUG_TO_NAV.items()}
+
 
 def navigate_to(section_name):
+    """Navigate to a section by updating query params (enables browser back/forward)."""
     if section_name in NAV_OPTIONS:
+        slug = _NAV_TO_SLUG.get(section_name, "home")
+        if slug == "home":
+            st.query_params.clear()
+        else:
+            st.query_params["page"] = slug
         st.session_state.nav_radio = section_name
+
+
+# Sync session state from URL on page load (handles browser back/forward)
+_url_page = st.query_params.get("page", "home")
+_nav_from_url = _SLUG_TO_NAV.get(_url_page, "Home")
+if "nav_radio" not in st.session_state:
+    st.session_state.nav_radio = _nav_from_url
+elif st.session_state.nav_radio != _nav_from_url:
+    # URL changed (browser back/forward) — sync session state to match
+    st.session_state.nav_radio = _nav_from_url
+
+# ============================================================
+# Session State Initialization
+# ============================================================
+# Health Risk questionnaire step tracking
+if "hra_step" not in st.session_state:
+    st.session_state.hra_step = 1
+if "hra_data" not in st.session_state:
+    st.session_state.hra_data = {}
+if "hra_submitted" not in st.session_state:
+    st.session_state.hra_submitted = False
 
 
 # ============================================================
@@ -671,10 +694,20 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     st.markdown("---")
 
+    def _sync_url_from_radio():
+        """When sidebar radio changes, update URL query params."""
+        sel = st.session_state.nav_radio
+        slug = _NAV_TO_SLUG.get(sel, "home")
+        if slug == "home":
+            st.query_params.clear()
+        else:
+            st.query_params["page"] = slug
+
     section = st.radio(
         "Navigation",
         NAV_OPTIONS,
         key="nav_radio",
+        on_change=_sync_url_from_radio,
         label_visibility="collapsed",
     )
 
