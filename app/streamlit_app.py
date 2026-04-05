@@ -18,7 +18,7 @@ import plotly.express as px
 import plotly.io as pio
 import streamlit as st
 
-pio.templates.default = "plotly_white"
+pio.templates.default = "plotly_dark"
 
 # Add project root to path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -166,27 +166,29 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-    /* Disclaimer styling */
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: #F1F5F9;
+    }
+
+    .main { background: #0F172A; }
+    .block-container { padding-top: 2rem; max-width: 1200px; }
+
+    /* Disclaimer */
     .disclaimer {
-        background: #FFF8E1;
-        border-left: 4px solid #FFC107;
+        background: rgba(251,191,36,0.08);
+        border-left: 4px solid #FBBF24;
         padding: 12px 16px;
         border-radius: 4px;
         font-size: 0.85rem;
-        color: #5D4037;
+        color: #FBBF24;
         margin-top: 24px;
     }
 
-    html, body, [class*="css"] {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
-    .main { background: linear-gradient(180deg, #f0f4f8 0%, #e8eef3 100%); }
-    .block-container { padding-top: 2rem; max-width: 1200px; }
-
     /* Hero Banner */
     .hero {
-        background: linear-gradient(135deg, #0f2027 0%, #203a43 40%, #2c5364 100%);
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 40%, #0F172A 100%);
+        border: 1px solid #334155;
         border-radius: 20px;
         padding: 48px 40px;
         margin-bottom: 32px;
@@ -200,18 +202,18 @@ st.markdown("""
         right: -20%;
         width: 500px;
         height: 500px;
-        background: radial-gradient(circle, rgba(0,119,182,0.2) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(56,189,248,0.12) 0%, transparent 70%);
         border-radius: 50%;
     }
     .hero h1 {
-        color: white;
+        color: #F1F5F9;
         font-size: 2.4rem;
         font-weight: 800;
         margin: 0 0 8px 0;
         letter-spacing: -0.02em;
     }
     .hero p {
-        color: rgba(255,255,255,0.75);
+        color: #94A3B8;
         font-size: 1.05rem;
         margin: 0;
         max-width: 600px;
@@ -225,34 +227,35 @@ st.markdown("""
         flex-wrap: wrap;
     }
     .stat-pill {
-        background: rgba(255,255,255,0.1);
+        background: rgba(56,189,248,0.08);
         backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.15);
+        border: 1px solid #334155;
         border-radius: 40px;
         padding: 8px 20px;
-        color: white;
+        color: #CBD5E1;
         font-size: 0.85rem;
         font-weight: 500;
     }
-    .stat-pill strong { font-weight: 700; color: #0077B6; }
+    .stat-pill strong { font-weight: 700; color: #38BDF8; }
 
-    /* Feature Cards */
+    /* Feature Cards -- FIXED ALIGNMENT */
     .feature-card {
-        background: white;
+        background: #1E293B;
         border-radius: 16px;
         padding: 28px 24px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
-        border: 1px solid rgba(0,0,0,0.04);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        border: 1px solid #334155;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         height: 100%;
+        min-height: 340px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
     }
     .feature-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-        border-color: rgba(0,119,182,0.25);
+        box-shadow: 0 8px 30px rgba(56,189,248,0.12);
+        border-color: #38BDF8;
     }
     .feature-icon {
         width: 52px;
@@ -264,32 +267,33 @@ st.markdown("""
         font-size: 1.5rem;
         margin-bottom: 16px;
     }
-    .icon-ecg { background: linear-gradient(135deg, #fce4ec, #f8bbd0); }
-    .icon-xray { background: linear-gradient(135deg, #e3f2fd, #bbdefb); }
-    .icon-risk { background: linear-gradient(135deg, #e8f5e9, #c8e6c9); }
-    .icon-cbc { background: linear-gradient(135deg, #f3e5f5, #ce93d8); }
-    .icon-diabetes { background: linear-gradient(135deg, #fff3e0, #ffcc80); }
-    .icon-lipid { background: linear-gradient(135deg, #e0f7fa, #80deea); }
-    .icon-kidney { background: linear-gradient(135deg, #fce4ec, #ef9a9a); }
-    .icon-lab { background: linear-gradient(135deg, #e8eaf6, #9fa8da); }
+    .icon-ecg { background: rgba(248,113,113,0.15); }
+    .icon-xray { background: rgba(56,189,248,0.15); }
+    .icon-risk { background: rgba(52,211,153,0.15); }
+    .icon-cbc { background: rgba(192,132,252,0.15); }
+    .icon-diabetes { background: rgba(251,191,36,0.15); }
+    .icon-lipid { background: rgba(34,211,238,0.15); }
+    .icon-kidney { background: rgba(248,113,113,0.15); }
+    .icon-lab { background: rgba(129,140,248,0.15); }
 
     .feature-card h3 {
         font-size: 1.1rem;
         font-weight: 700;
-        color: #1a2332;
+        color: #F1F5F9;
         margin: 0 0 8px 0;
     }
     .feature-card p {
-        color: #6b7b8d;
+        color: #94A3B8;
         font-size: 0.88rem;
         line-height: 1.55;
         margin: 0;
-        min-height: 60px;
+        min-height: 90px;
+        flex-shrink: 0;
     }
     .feature-tag {
         display: inline-block;
-        background: #f0f4f8;
-        color: #4a6274;
+        background: #0F172A;
+        color: #38BDF8;
         font-size: 0.72rem;
         font-weight: 600;
         padding: 3px 10px;
@@ -297,54 +301,55 @@ st.markdown("""
         margin-top: 14px;
         text-transform: uppercase;
         letter-spacing: 0.04em;
+        border: 1px solid #334155;
     }
 
     /* Metric Cards */
     .metric-card {
-        background: white;
+        background: #1E293B;
         border-radius: 14px;
         padding: 22px 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
-        border-left: 4px solid #0077B6;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        border-left: 4px solid #38BDF8;
         margin-bottom: 12px;
         transition: all 0.25s ease;
     }
     .metric-card:hover {
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 20px rgba(56,189,248,0.1);
     }
     .metric-value {
         font-size: 2rem;
         font-weight: 800;
-        color: #1a2332;
+        color: #F1F5F9;
         margin: 0;
         letter-spacing: -0.02em;
     }
     .metric-label {
         font-size: 0.75rem;
-        color: #8899a6;
+        color: #64748B;
         text-transform: uppercase;
         letter-spacing: 0.06em;
         font-weight: 600;
         margin-bottom: 4px;
     }
 
-    .risk-high { border-left-color: #e74c3c !important; }
-    .risk-high .metric-value { color: #c0392b; }
-    .risk-medium { border-left-color: #f39c12 !important; }
-    .risk-medium .metric-value { color: #e67e22; }
-    .risk-low { border-left-color: #27ae60 !important; }
-    .risk-low .metric-value { color: #229954; }
+    .risk-high { border-left-color: #F87171 !important; }
+    .risk-high .metric-value { color: #F87171; }
+    .risk-medium { border-left-color: #FBBF24 !important; }
+    .risk-medium .metric-value { color: #FBBF24; }
+    .risk-low { border-left-color: #34D399 !important; }
+    .risk-low .metric-value { color: #34D399; }
 
     /* Section Headers */
     .section-header {
         font-size: 1.6rem;
         font-weight: 800;
-        color: #1a2332;
+        color: #F1F5F9;
         margin-bottom: 4px;
         letter-spacing: -0.02em;
     }
     .section-sub {
-        color: #6b7b8d;
+        color: #94A3B8;
         font-size: 0.95rem;
         margin-bottom: 28px;
         line-height: 1.5;
@@ -352,159 +357,169 @@ st.markdown("""
 
     /* Result Box */
     .result-box {
-        background: linear-gradient(135deg, #0f2027, #2c5364);
-        color: white;
+        background: linear-gradient(135deg, #1E293B, #0F172A);
+        color: #F1F5F9;
         padding: 28px;
         border-radius: 16px;
         text-align: center;
         margin: 20px 0;
-        box-shadow: 0 8px 30px rgba(15,32,39,0.2);
+        border: 1px solid #334155;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
     }
     .result-box h2 {
-        color: white;
+        color: #38BDF8;
         margin: 0;
         font-size: 1.8rem;
         font-weight: 800;
     }
     .result-box p {
-        color: rgba(255,255,255,0.7);
+        color: #94A3B8;
         margin: 6px 0 0;
         font-size: 0.95rem;
     }
 
     /* Info Cards */
     .info-card {
-        background: white;
+        background: #1E293B;
         border-radius: 14px;
         padding: 22px 24px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-        border: 1px solid rgba(0,0,0,0.04);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        border: 1px solid #334155;
         margin-bottom: 12px;
     }
     .info-card h4 {
         font-size: 0.95rem;
         font-weight: 700;
-        color: #1a2332;
+        color: #F1F5F9;
         margin: 0 0 6px 0;
     }
     .info-card p {
         font-size: 0.85rem;
-        color: #6b7b8d;
+        color: #94A3B8;
         margin: 0;
         line-height: 1.5;
     }
 
     /* Upload Zone */
     .upload-zone {
-        background: white;
-        border: 2px dashed #d0d9e1;
+        background: #1E293B;
+        border: 2px dashed #334155;
         border-radius: 16px;
         padding: 40px 24px;
         text-align: center;
         transition: all 0.25s ease;
     }
     .upload-zone:hover {
-        border-color: #0077B6;
-        background: #f8fafb;
+        border-color: #38BDF8;
+        background: #1E293B;
     }
     .upload-icon { font-size: 2.5rem; margin-bottom: 12px; }
-    .upload-text { color: #6b7b8d; font-size: 0.9rem; }
+    .upload-text { color: #94A3B8; font-size: 0.9rem; }
 
     /* Sidebar Styling */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #003D5C 0%, #005F8C 100%);
+        background: #1E293B !important;
+        border-right: 1px solid #334155;
     }
     [data-testid="stSidebar"] * {
-        color: rgba(255,255,255,0.85) !important;
+        color: #CBD5E1 !important;
     }
     [data-testid="stSidebar"] .stRadio label {
-        color: rgba(255,255,255,0.9) !important;
+        color: #CBD5E1 !important;
         font-weight: 500;
         padding: 8px 4px;
         border-radius: 8px;
         transition: background 0.2s ease;
     }
     [data-testid="stSidebar"] .stRadio label:hover {
-        background: rgba(255,255,255,0.08);
+        background: rgba(56,189,248,0.08);
     }
     [data-testid="stSidebar"] hr {
-        border-color: rgba(255,255,255,0.1) !important;
+        border-color: #334155 !important;
     }
 
     /* Button Styling */
-    .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #0077B6, #005F8C) !important;
+    .stButton > button {
+        background: #0077B6 !important;
+        color: white !important;
         border: none !important;
-        border-radius: 12px !important;
-        padding: 12px 24px !important;
-        font-weight: 700 !important;
-        font-size: 1rem !important;
-        letter-spacing: 0.02em !important;
+        border-radius: 10px !important;
+        padding: 10px 24px !important;
+        font-weight: 600 !important;
         transition: all 0.3s ease !important;
     }
-    .stButton > button[kind="primary"]:hover {
-        box-shadow: 0 6px 20px rgba(0,95,140,0.3) !important;
+    .stButton > button:hover {
+        background: #005F8C !important;
+        box-shadow: 0 4px 16px rgba(0,119,182,0.3) !important;
         transform: translateY(-1px) !important;
+    }
+    .stButton > button[kind="primary"] {
+        background: #0077B6 !important;
     }
 
     /* Tab Styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 4px;
-        background: white;
+        background: #1E293B;
         border-radius: 12px;
         padding: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        border: 1px solid #334155;
     }
     .stTabs [data-baseweb="tab"] {
         border-radius: 8px;
         padding: 10px 20px;
         font-weight: 600;
+        color: #94A3B8;
+    }
+    .stTabs [aria-selected="true"] {
+        background: #0077B6 !important;
+        color: white !important;
     }
 
     /* Footer */
     .footer {
         text-align: center;
         padding: 24px 0 12px;
-        color: #8899a6;
+        color: #64748B;
         font-size: 0.78rem;
         letter-spacing: 0.01em;
     }
-    .footer a { color: #0077B6; text-decoration: none; font-weight: 600; }
+    .footer a { color: #38BDF8; text-decoration: none; font-weight: 600; }
     .footer-divider {
         width: 60px;
         height: 2px;
-        background: linear-gradient(90deg, transparent, #d0d9e1, transparent);
+        background: linear-gradient(90deg, transparent, #334155, transparent);
         margin: 0 auto 16px;
     }
 
     /* Flag Badges */
     .flag-critical {
-        background: #fadbd8;
-        color: #922b21;
+        background: rgba(248,113,113,0.15);
+        color: #F87171;
         padding: 2px 10px;
         border-radius: 20px;
         font-size: 0.75rem;
         font-weight: 600;
     }
     .flag-high {
-        background: #fdebd0;
-        color: #e67e22;
+        background: rgba(251,191,36,0.15);
+        color: #FBBF24;
         padding: 2px 10px;
         border-radius: 20px;
         font-size: 0.75rem;
         font-weight: 600;
     }
     .flag-low {
-        background: #fdebd0;
-        color: #e67e22;
+        background: rgba(251,191,36,0.15);
+        color: #FBBF24;
         padding: 2px 10px;
         border-radius: 20px;
         font-size: 0.75rem;
         font-weight: 600;
     }
     .flag-normal {
-        background: #d5f5e3;
-        color: #27ae60;
+        background: rgba(52,211,153,0.15);
+        color: #34D399;
         padding: 2px 10px;
         border-radius: 20px;
         font-size: 0.75rem;
@@ -518,19 +533,18 @@ st.markdown("""
         font-size: 0.88rem;
     }
     .lab-table th {
-        background: #f0f4f8;
+        background: #0F172A;
         padding: 10px 14px;
         text-align: left;
         font-weight: 600;
-        color: #4a6274;
-        border-bottom: 2px solid #e0e6ec;
+        color: #94A3B8;
+        border-bottom: 2px solid #334155;
     }
     .lab-table td {
         padding: 10px 14px;
-        border-bottom: 1px solid #eef1f5;
+        border-bottom: 1px solid #1E293B;
+        color: #CBD5E1;
     }
-
-    /* Disclaimer (duplicate kept for specificity) */
 
     /* CKD Grid */
     .ckd-grid {
@@ -539,17 +553,18 @@ st.markdown("""
         font-size: 0.88rem;
     }
     .ckd-grid th {
-        background: #f0f4f8;
+        background: #0F172A;
         padding: 10px 14px;
         text-align: center;
         font-weight: 600;
-        color: #4a6274;
-        border-bottom: 2px solid #e0e6ec;
+        color: #94A3B8;
+        border-bottom: 2px solid #334155;
     }
     .ckd-grid td {
         padding: 8px 14px;
-        border-bottom: 1px solid #eef1f5;
+        border-bottom: 1px solid #1E293B;
         text-align: center;
+        color: #CBD5E1;
     }
     .ckd-cell {
         padding: 8px;
@@ -561,35 +576,35 @@ st.markdown("""
 
     /* Questionnaire step card */
     .step-card {
-        background: white;
+        background: #1E293B;
         border-radius: 16px;
         padding: 32px 28px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        border: 1px solid rgba(0,0,0,0.04);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        border: 1px solid #334155;
         margin-bottom: 16px;
     }
     .step-card h3 {
         font-size: 1.15rem;
         font-weight: 700;
-        color: #1a2332;
+        color: #F1F5F9;
         margin: 0 0 6px 0;
     }
     .step-card p {
-        color: #6b7b8d;
+        color: #94A3B8;
         font-size: 0.9rem;
         margin: 0 0 18px 0;
     }
 
     /* Progress bar */
     .progress-bar-bg {
-        background: #e8eef3;
+        background: #334155;
         border-radius: 10px;
         height: 8px;
         margin-bottom: 24px;
         overflow: hidden;
     }
     .progress-bar-fill {
-        background: linear-gradient(90deg, #0077B6, #00B4D8);
+        background: linear-gradient(90deg, #0077B6, #38BDF8);
         height: 100%;
         border-radius: 10px;
         transition: width 0.4s ease;
@@ -604,8 +619,8 @@ st.markdown("""
         font-weight: 600;
         margin: 2px;
     }
-    .status-loaded { background: rgba(39,174,96,0.25); color: #2ecc71 !important; border: 1px solid rgba(39,174,96,0.4); }
-    .status-demo { background: rgba(243,156,18,0.25); color: #f1c40f !important; border: 1px solid rgba(243,156,18,0.4); }
+    .status-loaded { background: rgba(52,211,153,0.15); color: #34D399 !important; border: 1px solid rgba(52,211,153,0.3); }
+    .status-demo { background: rgba(251,191,36,0.15); color: #FBBF24 !important; border: 1px solid rgba(251,191,36,0.3); }
 
     /* Hide Streamlit defaults */
     #MainMenu {visibility: hidden;}
@@ -650,7 +665,7 @@ with st.sidebar:
     st.markdown("""
     <div style="text-align: center; padding: 8px 0 4px;">
         <div style="font-size: 2.2rem; margin-bottom: 2px;">🏥</div>
-        <div style="font-size: 1.1rem; font-weight: 800; color: #E0F0FF; letter-spacing: -0.02em;">Healthcare AI</div>
+        <div style="font-size: 1.1rem; font-weight: 800; color: #38BDF8; letter-spacing: -0.02em;">Healthcare AI</div>
         <div style="font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.6);">Prediction Portal</div>
     </div>
     """, unsafe_allow_html=True)
@@ -731,13 +746,13 @@ if section == "Home":
     for col, (num, icon, title, desc) in zip(step_cols, steps):
         with col:
             st.markdown(f"""
-            <div style="text-align: center; padding: 20px 12px; background: white; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); height: 100%;">
+            <div style="text-align: center; padding: 20px 12px; background: #1E293B; border: 1px solid #334155; border-radius: 14px; height: 100%;">
                 <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0077B6, #005F8C); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin: 0 auto 12px auto;">
                     {num}
                 </div>
                 <div style="font-size: 1.5rem; margin-bottom: 4px;">{icon}</div>
-                <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #1a2332;">{title}</h4>
-                <p style="font-size: 0.85rem; color: #6b7b8d; margin: 0;">{desc}</p>
+                <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #F1F5F9;">{title}</h4>
+                <p style="font-size: 0.85rem; color: #94A3B8; margin: 0;">{desc}</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -851,11 +866,11 @@ if section == "Home":
 # ============================================================
 elif section == "Heart / ECG":
     st.button("← Back to Home", key="back_home_ecg", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Heart / ECG Analysis</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Heart / ECG Analysis</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Heart / ECG Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Upload a 12-lead ECG recording, try a sample, or explore the demo analysis.</p>', unsafe_allow_html=True)
     st.markdown("""
-    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+    <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Upload your ECG file or try sample data → 2️⃣ Click Analyze → 3️⃣ View arrhythmia classification
     </div>
     """, unsafe_allow_html=True)
@@ -937,7 +952,7 @@ elif section == "Heart / ECG":
             xaxis_title="Sample",
             yaxis_title="Amplitude (mV)",
             height=500,
-            template="plotly_white",
+            template="plotly_dark",
             font=dict(family="Inter"),
         )
         st.plotly_chart(fig, use_container_width=True, key="ecg_signal_chart")
@@ -971,9 +986,9 @@ elif section == "Heart / ECG":
                 fig_p = px.bar(
                     probs_df, x="Probability (%)", y="Condition",
                     orientation="h", color="Probability (%)",
-                    color_continuous_scale=["#e8eef3", "#2c5364"],
+                    color_continuous_scale=["#1E293B", "#38BDF8"],
                 )
-                fig_p.update_layout(height=300, template="plotly_white", font=dict(family="Inter"))
+                fig_p.update_layout(height=300, template="plotly_dark", font=dict(family="Inter"))
                 st.plotly_chart(fig_p, use_container_width=True, key="ecg_probability_model")
 
                 if class_names[pred_idx] in ECG_CLASS_EXPLANATIONS:
@@ -990,18 +1005,18 @@ elif section == "Heart / ECG":
             fig_p = px.bar(
                 demo_probs, x="Probability (%)", y="Condition",
                 orientation="h", color="Probability (%)",
-                color_continuous_scale=["#e8eef3", "#2c5364"],
+                color_continuous_scale=["#1E293B", "#38BDF8"],
             )
-            fig_p.update_layout(height=260, template="plotly_white", font=dict(family="Inter"), showlegend=False)
+            fig_p.update_layout(height=260, template="plotly_dark", font=dict(family="Inter"), showlegend=False)
             st.plotly_chart(fig_p, use_container_width=True, key="ecg_probability_sample")
 
     # --- Upload Tab ---
     with tab_upload:
         st.markdown("""
-        <div style="text-align: center; padding: 32px 20px; background: #F8FAFC; border-radius: 12px; border: 2px dashed #E0E7EE; margin-bottom: 16px;">
+        <div style="text-align: center; padding: 32px 20px; background: #1E293B; border-radius: 12px; border: 2px dashed #334155; margin-bottom: 16px;">
             <div style="font-size: 2.5rem; margin-bottom: 8px;">📈</div>
-            <p style="color: #4A5568; font-size: 0.95rem; margin: 0;">Upload a 12-lead ECG recording to get instant arrhythmia classification</p>
-            <p style="color: #A0AEC0; font-size: 0.82rem; margin: 4px 0 0;">Supported formats: CSV, DAT, HEA, NPY</p>
+            <p style="color: #94A3B8; font-size: 0.95rem; margin: 0;">Upload a 12-lead ECG recording to get instant arrhythmia classification</p>
+            <p style="color: #64748B; font-size: 0.82rem; margin: 4px 0 0;">Supported formats: CSV, DAT, HEA, NPY</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1094,7 +1109,7 @@ elif section == "Heart / ECG":
         fig_demo.update_layout(
             title=dict(text="12-Lead ECG - Lead II", font=dict(size=16, family="Inter")),
             xaxis_title="Time (s)", yaxis_title="Amplitude (mV)",
-            height=380, template="plotly_white",
+            height=380, template="plotly_dark",
             font=dict(family="Inter"),
         )
         st.plotly_chart(fig_demo, use_container_width=True, key="ecg_demo_signal")
@@ -1106,9 +1121,9 @@ elif section == "Heart / ECG":
         fig_p = px.bar(
             demo_probs, x="Probability (%)", y="Condition",
             orientation="h", color="Probability (%)",
-            color_continuous_scale=["#e8eef3", "#2c5364"],
+            color_continuous_scale=["#1E293B", "#38BDF8"],
         )
-        fig_p.update_layout(height=260, template="plotly_white", font=dict(family="Inter"), showlegend=False)
+        fig_p.update_layout(height=260, template="plotly_dark", font=dict(family="Inter"), showlegend=False)
         st.plotly_chart(fig_p, use_container_width=True, key="ecg_demo_probability")
 
     st.markdown("---")
@@ -1127,11 +1142,11 @@ elif section == "Heart / ECG":
 # ============================================================
 elif section == "Chest X-Ray":
     st.button("← Back to Home", key="back_home_xray", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Chest X-Ray Analysis</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Chest X-Ray Analysis</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Chest X-Ray Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Upload a frontal chest X-ray, try a sample image, or view a demo prediction.</p>', unsafe_allow_html=True)
     st.markdown("""
-    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+    <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Upload a chest X-ray image or try sample data → 2️⃣ Click Analyze → 3️⃣ View pneumonia detection results
     </div>
     """, unsafe_allow_html=True)
@@ -1233,8 +1248,8 @@ elif section == "Chest X-Ray":
                         "Probability (%)": [normal_prob, pneumonia_prob]
                     })
                     fig = px.pie(probs_df, values="Probability (%)", names="Class",
-                                 color_discrete_sequence=["#27ae60", "#e74c3c"], hole=0.4)
-                    fig.update_layout(height=300, font=dict(family="Inter"), margin=dict(t=20, b=20), template="plotly_white")
+                                 color_discrete_sequence=["#34D399", "#F87171"], hole=0.4)
+                    fig.update_layout(height=300, font=dict(family="Inter"), margin=dict(t=20, b=20), template="plotly_dark")
                     st.plotly_chart(fig, use_container_width=True, key="xray_prediction_pie")
 
                     with st.expander("Clinical Interpretation", expanded=True):
@@ -1254,17 +1269,17 @@ elif section == "Chest X-Ray":
                     "Probability (%)": [82.3, 17.7]
                 })
                 fig = px.pie(demo_data, values="Probability (%)", names="Condition",
-                             color_discrete_sequence=["#27ae60", "#e74c3c"], hole=0.4)
-                fig.update_layout(height=300, font=dict(family="Inter"), margin=dict(t=20, b=20), template="plotly_white")
+                             color_discrete_sequence=["#34D399", "#F87171"], hole=0.4)
+                fig.update_layout(height=300, font=dict(family="Inter"), margin=dict(t=20, b=20), template="plotly_dark")
                 st.plotly_chart(fig, use_container_width=True, key="xray_demo_pie")
 
     # --- Upload Tab ---
     with tab_upload:
         st.markdown("""
-        <div style="text-align: center; padding: 32px 20px; background: #F8FAFC; border-radius: 12px; border: 2px dashed #E0E7EE; margin-bottom: 16px;">
+        <div style="text-align: center; padding: 32px 20px; background: #1E293B; border-radius: 12px; border: 2px dashed #334155; margin-bottom: 16px;">
             <div style="font-size: 2.5rem; margin-bottom: 8px;">🫁</div>
-            <p style="color: #4A5568; font-size: 0.95rem; margin: 0;">Upload a frontal chest X-ray for AI-powered pneumonia detection</p>
-            <p style="color: #A0AEC0; font-size: 0.82rem; margin: 4px 0 0;">Supported formats: PNG, JPEG</p>
+            <p style="color: #94A3B8; font-size: 0.95rem; margin: 0;">Upload a frontal chest X-ray for AI-powered pneumonia detection</p>
+            <p style="color: #64748B; font-size: 0.82rem; margin: 4px 0 0;">Supported formats: PNG, JPEG</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1320,11 +1335,11 @@ elif section == "Chest X-Ray":
 # ============================================================
 elif section == "Health Risk Assessment":
     st.button("← Back to Home", key="back_home_hra", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Health Risk Assessment</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Health Risk Assessment</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Health Risk Assessment</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Answer a few questions one step at a time to generate your heart disease risk prediction.</p>', unsafe_allow_html=True)
     st.markdown("""
-    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+    <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Answer the health questionnaire → 2️⃣ Click Predict → 3️⃣ View your heart disease risk score
     </div>
     """, unsafe_allow_html=True)
@@ -1766,11 +1781,11 @@ elif section == "Health Risk Assessment":
 # ============================================================
 elif section == "CBC Analysis":
     st.button("← Back to Home", key="back_home_cbc", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>CBC Analysis</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>CBC Analysis</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">CBC Analysis</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Enter complete blood count values for automated classification, differential visualization, and clinical interpretation.</p>', unsafe_allow_html=True)
     st.markdown("""
-    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+    <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Enter your blood count values → 2️⃣ Click Analyze → 3️⃣ View flagged abnormalities
     </div>
     """, unsafe_allow_html=True)
@@ -1934,7 +1949,7 @@ elif section == "CBC Analysis":
             )])
             fig_diff.update_layout(
                 title=dict(text="WBC Differential", font=dict(size=16, family="Inter")),
-                height=350, template="plotly_white", font=dict(family="Inter"),
+                height=350, template="plotly_dark", font=dict(family="Inter"),
                 margin=dict(t=60, b=20, l=20, r=20), showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
             )
@@ -1984,11 +1999,11 @@ elif section == "CBC Analysis":
 # ============================================================
 elif section == "Diabetes Screening":
     st.button("← Back to Home", key="back_home_diabetes", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Diabetes Screening</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Diabetes Screening</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Diabetes Screening</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Comprehensive diabetes risk assessment using HbA1c, fasting glucose, and the FINDRISC questionnaire.</p>', unsafe_allow_html=True)
     st.markdown("""
-    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+    <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Enter your HbA1c, glucose, and demographics → 2️⃣ Click Screen → 3️⃣ View your diabetes risk
     </div>
     """, unsafe_allow_html=True)
@@ -2160,7 +2175,7 @@ elif section == "Diabetes Screening":
             fig_contrib = px.bar(contrib_df, x="Points", y="Factor", orientation="h", color="Points",
                                  color_continuous_scale=["#d5f5e3", "#f39c12", "#e74c3c"])
             fig_contrib.update_layout(title=dict(text="Risk Factor Contributions", font=dict(size=16, family="Inter")),
-                                      height=320, template="plotly_white", font=dict(family="Inter"), showlegend=False)
+                                      height=320, template="plotly_dark", font=dict(family="Inter"), showlegend=False)
             st.plotly_chart(fig_contrib, use_container_width=True, key="diabetes_contrib_chart")
 
         st.markdown("---")
@@ -2190,11 +2205,11 @@ elif section == "Diabetes Screening":
 # ============================================================
 elif section == "Lipid Panel / CV Risk":
     st.button("← Back to Home", key="back_home_lipid", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lipid Panel / CV Risk</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lipid Panel / CV Risk</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Lipid Panel / CV Risk</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Lipid classification and 10-year ASCVD risk estimation using the Pooled Cohort Equations.</p>', unsafe_allow_html=True)
     st.markdown("""
-    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+    <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Enter your cholesterol panel → 2️⃣ Click Assess Risk → 3️⃣ View ASCVD risk and lipid classification
     </div>
     """, unsafe_allow_html=True)
@@ -2352,7 +2367,7 @@ elif section == "Lipid Panel / CV Risk":
                 text=[f"{v} mg/dL" for v in lipid_vals], textposition="outside",
             )])
             fig_lipid.update_layout(title=dict(text="Lipid Panel Values", font=dict(size=16, family="Inter")),
-                                    height=320, template="plotly_white", font=dict(family="Inter"), yaxis_title="mg/dL", showlegend=False)
+                                    height=320, template="plotly_dark", font=dict(family="Inter"), yaxis_title="mg/dL", showlegend=False)
             st.plotly_chart(fig_lipid, use_container_width=True, key="lipid_panel_chart")
 
         st.markdown("**Lipid Ratios**")
@@ -2408,11 +2423,11 @@ elif section == "Lipid Panel / CV Risk":
 # ============================================================
 elif section == "Kidney Function":
     st.button("← Back to Home", key="back_home_kidney", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Kidney Function</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Kidney Function</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Kidney Function</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">CKD-EPI 2021 race-free eGFR estimation with KDIGO staging and risk classification.</p>', unsafe_allow_html=True)
     st.markdown("""
-    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+    <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Enter serum creatinine and demographics → 2️⃣ Click Calculate → 3️⃣ View eGFR and CKD staging
     </div>
     """, unsafe_allow_html=True)
@@ -2557,7 +2572,7 @@ elif section == "Kidney Function":
                     text=[f"{v} mL/min" for v in comp_df["eGFR"]], textposition="outside",
                 )])
                 fig_comp.update_layout(title=dict(text="eGFR Comparison", font=dict(size=16, family="Inter")),
-                                       height=320, template="plotly_white", font=dict(family="Inter"), yaxis_title="eGFR (mL/min/1.73m\u00b2)", showlegend=False)
+                                       height=320, template="plotly_dark", font=dict(family="Inter"), yaxis_title="eGFR (mL/min/1.73m\u00b2)", showlegend=False)
                 st.plotly_chart(fig_comp, use_container_width=True, key="kidney_comparison_chart")
             else:
                 st.markdown("""
@@ -2638,11 +2653,11 @@ elif section == "Kidney Function":
 # ============================================================
 elif section == "Lab Report Upload":
     st.button("← Back to Home", key="back_home_lab", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lab Report Upload</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lab Report Upload</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Lab Report Upload</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Upload a lab report PDF for automated parsing, or explore the demo report with color-coded analysis.</p>', unsafe_allow_html=True)
     st.markdown("""
-    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+    <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Upload a PDF lab report → 2️⃣ Parsing happens automatically → 3️⃣ View flagged abnormal values
     </div>
     """, unsafe_allow_html=True)
@@ -2694,10 +2709,10 @@ elif section == "Lab Report Upload":
     """, unsafe_allow_html=True)
 
     st.markdown("""
-    <div style="text-align: center; padding: 32px 20px; background: #F8FAFC; border-radius: 12px; border: 2px dashed #E0E7EE; margin-bottom: 16px;">
+    <div style="text-align: center; padding: 32px 20px; background: #1E293B; border-radius: 12px; border: 2px dashed #334155; margin-bottom: 16px;">
         <div style="font-size: 2.5rem; margin-bottom: 8px;">📋</div>
-        <p style="color: #4A5568; font-size: 0.95rem; margin: 0;">Upload a lab report PDF for automated value extraction and analysis</p>
-        <p style="color: #A0AEC0; font-size: 0.82rem; margin: 4px 0 0;">Supported format: PDF</p>
+        <p style="color: #94A3B8; font-size: 0.95rem; margin: 0;">Upload a lab report PDF for automated value extraction and analysis</p>
+        <p style="color: #64748B; font-size: 0.82rem; margin: 4px 0 0;">Supported format: PDF</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -2809,7 +2824,7 @@ elif section == "Lab Report Upload":
                     x=abn_names, y=abn_devs, marker_color=abn_colors,
                     text=[f"+{d}" if d > 0 else str(d) for d in abn_devs], textposition="outside",
                 )])
-                fig_abn.update_layout(height=320, template="plotly_white", font=dict(family="Inter"), yaxis_title="Deviation from Reference", showlegend=False)
+                fig_abn.update_layout(height=320, template="plotly_dark", font=dict(family="Inter"), yaxis_title="Deviation from Reference", showlegend=False)
                 st.plotly_chart(fig_abn, use_container_width=True, key="lab_abnormality_chart")
 
         st.markdown("---")
@@ -2851,11 +2866,11 @@ elif section == "Lab Report Upload":
 # ============================================================
 elif section == "AI Assistant":
     st.button("\u2190 Back to Home", key="back_home_ai", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>AI Assistant</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>AI Assistant</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">AI Assistant</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Ask questions about this portal\'s features, tools, and how to interpret results.</p>', unsafe_allow_html=True)
     st.markdown("""
-    <div style="background: #E8F4FD; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #005F8C;">
+    <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Type your question below → 2️⃣ The assistant will help you navigate the portal
     </div>
     """, unsafe_allow_html=True)
@@ -2955,7 +2970,7 @@ elif section == "AI Assistant":
 # ============================================================
 elif section == "Privacy & Compliance":
     st.button("← Back to Home", key="back_home_privacy", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #6b7b8d; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Privacy & Compliance</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Privacy & Compliance</strong></p>', unsafe_allow_html=True)
     st.markdown('<p class="section-header">Privacy & HIPAA Compliance</p>', unsafe_allow_html=True)
     st.markdown('<p class="section-sub">Information about data handling, privacy practices, and regulatory compliance.</p>', unsafe_allow_html=True)
 
