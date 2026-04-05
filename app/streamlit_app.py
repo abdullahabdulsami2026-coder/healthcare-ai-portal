@@ -17,7 +17,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 import plotly.io as pio
 import streamlit as st
-import streamlit.components.v1 as components
 
 pio.templates.default = "plotly_dark"
 
@@ -693,22 +692,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
-# Browser back/forward — popstate listener
-# ============================================================
-components.html("""
-<script>
-    // Listen for browser back/forward button
-    if (!window._popstateListenerAdded) {
-        window._popstateListenerAdded = true;
-        window.addEventListener('popstate', function(event) {
-            // Reload the page so Streamlit re-reads query params from the URL
-            window.location.reload();
-        });
-    }
-</script>
-""", height=0)
-
-# ============================================================
 # Navigation — URL-based with query_params for browser back/forward
 # ============================================================
 NAV_OPTIONS = [
@@ -728,26 +711,8 @@ _SLUG_TO_NAV = {
 _NAV_TO_SLUG = {v: k for k, v in _SLUG_TO_NAV.items()}
 
 
-def _push_history(slug):
-    """Inject JS to push a real browser history entry."""
-    if slug == "home":
-        url = "?"
-    else:
-        url = f"?page={slug}"
-    components.html(f"""
-    <script>
-        const url = "{url}";
-        if (window.parent.location.search !== url && url !== "?") {{
-            window.parent.history.pushState({{page: "{slug}"}}, "", url);
-        }} else if (url === "?" && window.parent.location.search !== "") {{
-            window.parent.history.pushState({{page: "home"}}, "", window.parent.location.pathname);
-        }}
-    </script>
-    """, height=0)
-
-
 def navigate_to(section_name):
-    """Navigate to a section with browser history support."""
+    """Navigate to a section by updating query params."""
     if section_name in NAV_OPTIONS:
         slug = _NAV_TO_SLUG.get(section_name, "home")
         if slug == "home":
@@ -755,7 +720,6 @@ def navigate_to(section_name):
         else:
             st.query_params["page"] = slug
         st.session_state.nav_radio = section_name
-        st.session_state._push_slug = slug
 
 
 # Sync session state from URL on page load (handles browser back/forward)
@@ -800,7 +764,6 @@ with st.sidebar:
             st.query_params.clear()
         else:
             st.query_params["page"] = slug
-        st.session_state._push_slug = slug
 
     section = st.radio(
         "Navigation",
@@ -844,15 +807,31 @@ with st.sidebar:
 
 
 # ============================================================
-# Push browser history for current page
+# Browser back/forward — inject JS into main page via st.markdown
 # ============================================================
 _current_slug = _NAV_TO_SLUG.get(section, "home")
-if hasattr(st.session_state, '_push_slug'):
-    _push_history(st.session_state._push_slug)
-    del st.session_state._push_slug
-else:
-    # Ensure URL matches current section on every render
-    _push_history(_current_slug)
+st.markdown(f"""
+<script>
+    // Push browser history entry for current page
+    (function() {{
+        const slug = "{_current_slug}";
+        const targetSearch = slug === "home" ? "" : "?page=" + slug;
+        const currentSearch = window.location.search;
+        if (currentSearch !== targetSearch) {{
+            const newUrl = slug === "home" ? window.location.pathname : window.location.pathname + "?page=" + slug;
+            window.history.pushState({{page: slug}}, "", newUrl);
+        }}
+        // Listen for back/forward
+        if (!window._healthcarePopstateSet) {{
+            window._healthcarePopstateSet = true;
+            window.addEventListener("popstate", function(e) {{
+                // Reload page so Streamlit re-reads URL params
+                window.location.reload();
+            }});
+        }}
+    }})();
+</script>
+""", unsafe_allow_html=True)
 
 # ============================================================
 # HOME SECTION
@@ -959,7 +938,7 @@ if section == "Home":
         ("Lipid Panel / CV Risk", "icon-lipid", "🫀", "Lipid Panel / CV Risk",
          "Lipid classification per ATP III guidelines with 10-year ASCVD risk estimation using Pooled Cohort Equations.", "Pooled Cohort Equations"),
         ("Kidney Function", "icon-kidney", "🫘", "Kidney Function",
-         "CKD-EPI 2021 race-free eGFR calculation with KDIGO staging, albuminuria assessment, and risk matrix.", "CKD-EPI 2021"),
+         "CKD-EPI 2021 race-free eGFR with KDIGO staging, albuminuria assessment, and risk classification.", "CKD-EPI 2021"),
         ("Lab Report Upload", "icon-lab", "📄", "Lab Report Upload",
          "Upload lab report PDFs for automated parsing and analysis. Get color-coded flags for abnormal values.", "PDF Parsing"),
     ]
@@ -973,7 +952,7 @@ if section == "Home":
                 with col:
                     # Fixed-height card HTML so buttons align across columns
                     st.markdown(f"""
-                    <div style="background: #1E293B; border-radius: 16px; padding: 28px 24px; border: 1px solid #334155; height: 280px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: all 0.3s ease; margin-bottom: 8px;">
+                    <div style="background: #1E293B; border-radius: 16px; padding: 28px 24px; border: 1px solid #334155; min-height: 270px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: all 0.3s ease; margin-bottom: 8px;">
                         <div>
                             <div class="feature-icon {icon_cls}">{emoji}</div>
                             <h3 style="font-size: 1.1rem; font-weight: 700; color: #F1F5F9; margin: 0 0 8px 0;">{title}</h3>
