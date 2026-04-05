@@ -946,7 +946,7 @@ elif section == "Heart / ECG":
         if _ecg_loaded:
             try:
                 from utils.ecg_utils import prepare_ecg_for_model, DIAGNOSTIC_CLASSES
-                with st.spinner("Analyzing ECG..."):
+                with st.spinner("Analyzing your 12-lead ECG recording..."):
                     processed = prepare_ecg_for_model(ecg_data)
                     if processed.ndim == 2:
                         processed = np.expand_dims(processed, axis=0)
@@ -954,6 +954,8 @@ elif section == "Heart / ECG":
                     class_names = list(DIAGNOSTIC_CLASSES.values())
                     pred_idx = int(np.argmax(preds))
                     confidence = float(preds[pred_idx]) * 100
+
+                st.success("ECG analysis complete!")
 
                 st.markdown(f"""
                 <div class="result-box">
@@ -995,6 +997,14 @@ elif section == "Heart / ECG":
 
     # --- Upload Tab ---
     with tab_upload:
+        st.markdown("""
+        <div style="text-align: center; padding: 32px 20px; background: #F8FAFC; border-radius: 12px; border: 2px dashed #E0E7EE; margin-bottom: 16px;">
+            <div style="font-size: 2.5rem; margin-bottom: 8px;">📈</div>
+            <p style="color: #4A5568; font-size: 0.95rem; margin: 0;">Upload a 12-lead ECG recording to get instant arrhythmia classification</p>
+            <p style="color: #A0AEC0; font-size: 0.82rem; margin: 4px 0 0;">Supported formats: CSV, DAT, HEA, NPY</p>
+        </div>
+        """, unsafe_allow_html=True)
+
         uploaded_file = st.file_uploader(
             "Choose ECG file", type=["csv", "dat", "hea", "npy"],
             help="CSV (columns = leads), NumPy arrays, or WFDB format",
@@ -1191,8 +1201,10 @@ elif section == "Chest X-Ray":
                     img_array = np.array(img.convert("RGB").resize((224, 224))).astype(np.float32) / 255.0
                     img_batch = np.expand_dims(img_array, axis=0)
 
-                    with st.spinner("Analyzing X-ray..."):
+                    with st.spinner("Running pneumonia detection on your chest X-ray..."):
                         preds = _xray_model.predict(img_batch, verbose=0)[0]
+
+                    st.success("X-ray analysis complete!")
 
                     if len(preds) == 1:
                         pneumonia_prob = float(preds[0]) * 100
@@ -1248,6 +1260,14 @@ elif section == "Chest X-Ray":
 
     # --- Upload Tab ---
     with tab_upload:
+        st.markdown("""
+        <div style="text-align: center; padding: 32px 20px; background: #F8FAFC; border-radius: 12px; border: 2px dashed #E0E7EE; margin-bottom: 16px;">
+            <div style="font-size: 2.5rem; margin-bottom: 8px;">🫁</div>
+            <p style="color: #4A5568; font-size: 0.95rem; margin: 0;">Upload a frontal chest X-ray for AI-powered pneumonia detection</p>
+            <p style="color: #A0AEC0; font-size: 0.82rem; margin: 4px 0 0;">Supported formats: PNG, JPEG</p>
+        </div>
+        """, unsafe_allow_html=True)
+
         uploaded_xray = st.file_uploader(
             "Choose X-ray image", type=["png", "jpg", "jpeg"],
             key="xray_file_uploader",
@@ -1610,7 +1630,7 @@ elif section == "Health Risk Assessment":
 
         if _heart_loaded:
             try:
-                with st.spinner("Running ML prediction..."):
+                with st.spinner("Running cardiac risk ensemble model..."):
                     features_scaled = _heart_scaler.transform(features)
                     proba = _heart_model.predict_proba(features_scaled)[0]
                     risk_score = float(proba[1]) * 100
@@ -1621,6 +1641,8 @@ elif section == "Health Risk Assessment":
         else:
             risk_score, predicted = _fallback_risk(age, sex_val, cp_val, trestbps, chol, fbs_val, thalach, exang_val, oldpeak, ca)
             st.info("Using rule-based estimate. Train the model for ML predictions.")
+
+        st.success("Risk assessment complete!")
 
         # Results
         risk_class = "risk-high" if predicted == "High Risk" else "risk-low"
@@ -1820,6 +1842,8 @@ elif section == "CBC Analysis":
             "MCHC": cbc_mchc, "RDW": cbc_rdw, "Platelets": cbc_plt,
             "Neutrophils": cbc_neut,
         }
+
+        st.success("CBC analysis complete!")
 
         st.markdown("---")
 
@@ -2039,6 +2063,8 @@ elif section == "Diabetes Screening":
             family_hx=family_map[dm_family],
         )
 
+        st.success("Diabetes screening complete!")
+
         st.markdown("---")
 
         mc1, mc2, mc3 = st.columns(3, gap="medium")
@@ -2235,6 +2261,8 @@ elif section == "Lipid Panel / CV Risk":
             age=lp_age, sex=lp_sex.lower(), race=lp_race, total_chol=lp_tc, hdl=lp_hdl,
             sbp=lp_sbp, bp_treated=lp_bp_med, smoker=lp_smoker, diabetes=lp_diabetes,
         )
+
+        st.success("Lipid assessment complete!")
 
         st.markdown("---")
 
@@ -2447,6 +2475,8 @@ elif section == "Kidney Function":
 
         bun_cr_ratio = round(kf_bun / kf_cr, 1) if kf_cr > 0 else 0
 
+        st.success("eGFR calculation complete!")
+
         st.markdown("---")
 
         mc1, mc2, mc3 = st.columns(3, gap="medium")
@@ -2643,6 +2673,14 @@ elif section == "Lab Report Upload":
     </div>
     """, unsafe_allow_html=True)
 
+    st.markdown("""
+    <div style="text-align: center; padding: 32px 20px; background: #F8FAFC; border-radius: 12px; border: 2px dashed #E0E7EE; margin-bottom: 16px;">
+        <div style="font-size: 2.5rem; margin-bottom: 8px;">📋</div>
+        <p style="color: #4A5568; font-size: 0.95rem; margin: 0;">Upload a lab report PDF for automated value extraction and analysis</p>
+        <p style="color: #A0AEC0; font-size: 0.82rem; margin: 4px 0 0;">Supported format: PDF</p>
+    </div>
+    """, unsafe_allow_html=True)
+
     uploaded_pdf = st.file_uploader("Upload Lab Report (PDF)", type=["pdf"], key="lab_pdf")
 
     tab_parsed, tab_raw = st.tabs(["Parsed Results", "Raw Text"])
@@ -2680,6 +2718,7 @@ elif section == "Lab Report Upload":
 
             if parsed_labs:
                 lab_data = parsed_labs
+                st.success("Lab report parsed successfully!")
             else:
                 lab_data = DEMO_LAB_REPORT
                 used_demo = True
