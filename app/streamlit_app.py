@@ -439,6 +439,17 @@ st.markdown("""
         border-color: #334155 !important;
     }
 
+    /* Make the default sidebar expand arrow visible on dark background */
+    [data-testid="stSidebarCollapsedControl"] {
+        background: #0077B6 !important;
+        border-radius: 0 8px 8px 0 !important;
+        padding: 8px !important;
+    }
+    [data-testid="stSidebarCollapsedControl"] svg {
+        color: #FFFFFF !important;
+        fill: #FFFFFF !important;
+    }
+
     /* Button Styling */
     .stButton > button {
         background: #0077B6 !important;
