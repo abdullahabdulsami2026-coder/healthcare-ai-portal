@@ -417,10 +417,24 @@ st.markdown("""
     .upload-icon { font-size: 2.5rem; margin-bottom: 12px; }
     .upload-text { color: #94A3B8; font-size: 0.9rem; }
 
-    /* Sidebar Styling */
+    /* Sidebar Styling — always visible, cannot be collapsed */
     [data-testid="stSidebar"] {
         background: #1E293B !important;
         border-right: 1px solid #334155;
+        min-width: 280px !important;
+        max-width: 280px !important;
+        width: 280px !important;
+        transform: none !important;
+        position: relative !important;
+    }
+    [data-testid="stSidebar"] > div:first-child {
+        width: 280px !important;
+    }
+    /* Hide the collapse button since sidebar is always open */
+    [data-testid="stSidebar"] [data-testid="stSidebarCollapseButton"],
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"] {
+        display: none !important;
     }
     [data-testid="stSidebar"] * {
         color: #CBD5E1 !important;
@@ -437,17 +451,6 @@ st.markdown("""
     }
     [data-testid="stSidebar"] hr {
         border-color: #334155 !important;
-    }
-
-    /* Make the default sidebar expand arrow visible on dark background */
-    [data-testid="stSidebarCollapsedControl"] {
-        background: #0077B6 !important;
-        border-radius: 0 8px 8px 0 !important;
-        padding: 8px !important;
-    }
-    [data-testid="stSidebarCollapsedControl"] svg {
-        color: #FFFFFF !important;
-        fill: #FFFFFF !important;
     }
 
     /* Button Styling */
