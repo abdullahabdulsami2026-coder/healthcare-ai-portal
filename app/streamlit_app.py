@@ -42,6 +42,12 @@ from utils.clinical_calculators import (
     ckd_epi_creatinine, ckd_epi_cystatin, stage_ckd, stage_albuminuria,
     DEMO_LAB_REPORT,
 )
+from utils.design import (
+    inject_global_css,
+    hero, section_header, feature_card, metric_card, result_card,
+    info_callout, status_badge, disclaimer, page_divider, footer,
+    Color, Space, Radius,
+)
 
 # ============================================================
 # Cached Model Loading (Part 1 — Stability)
@@ -161,11 +167,21 @@ st.set_page_config(
 )
 
 # ============================================================
-# Custom CSS
+# Design system — all styling lives in utils/design.py
 # ============================================================
+inject_global_css()
+
+# Legacy CSS retained below for classes still referenced inline on some
+# pages (.hero, .feature-card, .info-card, .step-item, .benefit-card,
+# .flag-critical/high/low/normal, .lab-table, .ckd-grid, .status-loaded,
+# .status-demo, .upload-zone, .progress-bar-*, .step-card, .result-box,
+# .section-header, .section-sub, .stat-pill, .metric-*, .risk-*,
+# .footer). These will be migrated to design-system components section
+# by section; once a section stops referencing a legacy class we can
+# delete the corresponding rule below.
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    /* Legacy — kept for backward compat until each section is migrated. */
 
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -762,11 +778,16 @@ if "hra_submitted" not in st.session_state:
 # Sidebar
 # ============================================================
 with st.sidebar:
-    st.markdown("""
-    <div style="text-align: center; padding: 8px 0 4px;">
-        <div style="font-size: 2.2rem; margin-bottom: 2px;">🏥</div>
-        <div style="font-size: 1.1rem; font-weight: 800; color: #38BDF8; letter-spacing: -0.02em;">Healthcare AI</div>
-        <div style="font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.6);">Prediction Portal</div>
+    # Brand lock-up
+    st.markdown(f"""
+    <div style="text-align:center; padding: 4px 0 12px;">
+        <div style="font-size: 2rem; margin-bottom: 2px;">🏥</div>
+        <div style="font-size: 1.05rem; font-weight: 800; color: {Color.brand};
+                    letter-spacing: -0.02em;">Healthcare AI</div>
+        <div style="font-size: 0.75rem; font-weight: 500; color: {Color.text_muted};
+                    text-transform: uppercase; letter-spacing: 0.08em;">
+            Prediction Portal
+        </div>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("---")
@@ -790,33 +811,41 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Health check status
-    st.markdown("##### System Status")
-    if _heart_loaded:
-        st.markdown('<span class="status-badge status-loaded">Heart Risk: Model Loaded</span>', unsafe_allow_html=True)
-    else:
-        st.markdown('<span class="status-badge status-demo">Heart Risk: Demo Mode</span>', unsafe_allow_html=True)
-
-    if _ecg_loaded:
-        st.markdown('<span class="status-badge status-loaded">ECG: Model Loaded</span>', unsafe_allow_html=True)
-    else:
-        st.markdown('<span class="status-badge status-demo">ECG: Demo Mode</span>', unsafe_allow_html=True)
-
-    if _xray_loaded:
-        st.markdown('<span class="status-badge status-loaded">X-Ray: Model Loaded</span>', unsafe_allow_html=True)
-    else:
-        st.markdown('<span class="status-badge status-demo">X-Ray: Demo Mode</span>', unsafe_allow_html=True)
-
-    st.markdown('<span class="status-badge status-loaded">CBC Analysis: Algorithm</span>', unsafe_allow_html=True)
-    st.markdown('<span class="status-badge status-loaded">Diabetes: Algorithm</span>', unsafe_allow_html=True)
-    st.markdown('<span class="status-badge status-loaded">Lipid/CV: Algorithm</span>', unsafe_allow_html=True)
-    st.markdown('<span class="status-badge status-loaded">Kidney: Algorithm</span>', unsafe_allow_html=True)
+    # System status — rendered with design-system status_badge()
+    st.markdown(
+        f'<p style="font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; '
+        f'text-transform: uppercase; color: {Color.text_muted}; margin: 0 0 8px 0;">'
+        f'System Status</p>',
+        unsafe_allow_html=True,
+    )
+    _badges = [
+        (_heart_loaded, "Heart Risk"),
+        (_ecg_loaded,   "ECG"),
+        (_xray_loaded,  "X-Ray"),
+    ]
+    _badge_html = []
+    for loaded, name in _badges:
+        variant = "success" if loaded else "warning"
+        label = f"{name}: {'Model Loaded' if loaded else 'Demo Mode'}"
+        _badge_html.append(status_badge(label, variant=variant))
+    for algo_name in ("CBC", "Diabetes", "Lipid/CV", "Kidney"):
+        _badge_html.append(status_badge(f"{algo_name}: Algorithm", variant="info"))
+    st.markdown(
+        f'<div style="display:flex; flex-wrap:wrap; gap:6px;">'
+        + "".join(_badge_html)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
 
     st.markdown("---")
-    st.markdown("##### Built by")
+    st.markdown(
+        f'<p style="font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; '
+        f'text-transform: uppercase; color: {Color.text_muted}; margin: 0 0 8px 0;">'
+        f'Built by</p>',
+        unsafe_allow_html=True,
+    )
     st.markdown("**Abdullah Abdul Sami**")
-    st.caption("MS Data Science (AI)")
-    st.caption("Northwestern University")
+    st.caption("MS Data Science (AI) · Northwestern University")
     st.markdown("---")
     st.caption("For research and educational purposes only. Not for clinical diagnosis.")
 
@@ -839,169 +868,180 @@ components.html(
 # HOME SECTION
 # ============================================================
 if section == "Home":
-    st.markdown("""
-    <div class="hero">
-        <h1>Healthcare AI Prediction Portal</h1>
-        <p>
-            AI-powered clinical decision support. Upload ECGs, chest X-rays, or enter patient
-            vitals to receive instant diagnostic predictions powered by deep learning.
-        </p>
-        <div class="stat-row">
-            <span class="stat-pill"><strong>21,837</strong>&nbsp; ECG Records</span>
-            <span class="stat-pill"><strong>112,120</strong>&nbsp; X-Ray Images</span>
-            <span class="stat-pill"><strong>920</strong>&nbsp; Patient Records</span>
-            <span class="stat-pill"><strong>10</strong>&nbsp; Clinical Modules</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # ── Hero ────────────────────────────────────────────────────────
+    hero(
+        eyebrow="Clinical Decision Support",
+        title="Healthcare AI Prediction Portal",
+        subtitle=(
+            "Upload ECGs, chest X-rays, or enter patient vitals to receive "
+            "instant AI-powered diagnostic predictions. 10 clinical modules "
+            "covering cardiology, radiology, hematology, nephrology, and "
+            "endocrinology."
+        ),
+        stats=[
+            ("ECG Records",     "21,837"),
+            ("X-Ray Images",    "112,120"),
+            ("Patient Records", "920"),
+            ("Clinical Modules","10"),
+        ],
+    )
 
-    # How It Works Steps — rendered as single HTML grid for perfect alignment
-    st.markdown("""
-    <br>
-    <p class="section-header">How It Works</p>
-    <p class="section-sub">Get AI-powered clinical insights in four simple steps.</p>
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px;">
-        <div class="step-item">
-            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0077B6, #005F8C); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin: 0 auto 12px auto;">1</div>
-            <div style="font-size: 1.5rem; margin-bottom: 4px;">🔍</div>
-            <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #F1F5F9;">Browse Modules</h4>
-            <p style="font-size: 0.85rem; color: #94A3B8; margin: 0;">Explore our 10 clinical AI tools below</p>
-        </div>
-        <div class="step-item">
-            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0077B6, #005F8C); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin: 0 auto 12px auto;">2</div>
-            <div style="font-size: 1.5rem; margin-bottom: 4px;">👆</div>
-            <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #F1F5F9;">Select a Module</h4>
-            <p style="font-size: 0.85rem; color: #94A3B8; margin: 0;">Click 'Open' on any module to get started</p>
-        </div>
-        <div class="step-item">
-            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0077B6, #005F8C); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin: 0 auto 12px auto;">3</div>
-            <div style="font-size: 1.5rem; margin-bottom: 4px;">📤</div>
-            <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #F1F5F9;">Upload or Try Samples</h4>
-            <p style="font-size: 0.85rem; color: #94A3B8; margin: 0;">Provide your data or use built-in sample datasets</p>
-        </div>
-        <div class="step-item">
-            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #0077B6, #005F8C); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; margin: 0 auto 12px auto;">4</div>
-            <div style="font-size: 1.5rem; margin-bottom: 4px;">📊</div>
-            <h4 style="margin: 0 0 4px 0; font-size: 1rem; color: #F1F5F9;">View Results</h4>
-            <p style="font-size: 0.85rem; color: #94A3B8; margin: 0;">Get AI predictions with visual explanations instantly</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # ── How It Works ────────────────────────────────────────────────
+    section_header(
+        "How It Works",
+        subtitle="AI-powered clinical insights in four simple steps.",
+    )
+    _STEPS = [
+        ("1", "🔍", "Browse modules",       "Explore 10 clinical AI tools below."),
+        ("2", "👆", "Select a module",      "Click 'Open' on any card to begin."),
+        ("3", "📤", "Upload or try sample", "Provide your data or use the built-in samples."),
+        ("4", "📊", "View results",         "Get predictions with visual explanations in seconds."),
+    ]
+    _step_cols = st.columns(4, gap="medium")
+    for (col, (num, icon, title, desc)) in zip(_step_cols, _STEPS):
+        with col:
+            st.markdown(f"""
+                <div style="
+                    background: {Color.surface};
+                    border: 1px solid {Color.border};
+                    border-radius: {Radius.lg};
+                    padding: {Space.xl} {Space.lg};
+                    text-align: center;
+                    height: 100%;
+                    min-height: 180px;
+                    display: flex; flex-direction: column; align-items: center;
+                ">
+                    <div style="
+                        width: 40px; height: 40px;
+                        background: {Color.brand_soft};
+                        color: {Color.brand};
+                        border-radius: {Radius.pill};
+                        display: flex; align-items: center; justify-content: center;
+                        font-size: 0.95rem; font-weight: 700;
+                        margin-bottom: {Space.md};
+                        border: 1px solid {Color.border_strong};
+                    ">{num}</div>
+                    <div style="font-size: 1.5rem; margin-bottom: {Space.sm};">{icon}</div>
+                    <div style="font-size: 0.95rem; font-weight: 700;
+                                color: {Color.text_primary}; margin-bottom: 4px;">
+                        {title}
+                    </div>
+                    <div style="font-size: 0.82rem; color: {Color.text_secondary};
+                                line-height: 1.5;">{desc}</div>
+                </div>
+            """, unsafe_allow_html=True)
 
-    # Why Use This Portal — rendered as single HTML grid for perfect alignment
-    st.markdown("""
-    <p class="section-header">Why Use This Portal?</p>
-    <p class="section-sub">Built for students, researchers, and clinicians who want to explore AI in healthcare.</p>
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px;">
-        <div class="benefit-card">
-            <div style="font-size: 1.5rem; margin-bottom: 8px;">⚡</div>
-            <h4>Free &amp; Instant</h4>
-            <p>All 10 clinical AI tools are completely free with no registration required. Get results in seconds.</p>
-        </div>
-        <div class="benefit-card">
-            <div style="font-size: 1.5rem; margin-bottom: 8px;">🔬</div>
-            <h4>Research-Grade Models</h4>
-            <p>Built on peer-reviewed ML architectures including CNNs, transfer learning, and ensemble methods with published accuracy metrics.</p>
-        </div>
-        <div class="benefit-card">
-            <div style="font-size: 1.5rem; margin-bottom: 8px;">🧪</div>
-            <h4>Try Before You Upload</h4>
-            <p>Every module includes built-in sample data so you can explore and understand the tools before using your own data.</p>
-        </div>
-        <div class="benefit-card">
-            <div style="font-size: 1.5rem; margin-bottom: 8px;">📖</div>
-            <h4>Educational &amp; Transparent</h4>
-            <p>Each tool explains how its AI model works, what the results mean, and what the limitations are.</p>
-        </div>
-        <div class="benefit-card">
-            <div style="font-size: 1.5rem; margin-bottom: 8px;">🔒</div>
-            <h4>Privacy First</h4>
-            <p>Your uploaded data is processed in real time and never stored. No accounts, no data collection, no tracking.</p>
-        </div>
-        <div class="benefit-card">
-            <div style="font-size: 1.5rem; margin-bottom: 8px;">🩺</div>
-            <h4>Clinically Relevant</h4>
-            <p>Modules cover cardiology, radiology, hematology, nephrology, endocrinology, and more.</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div style="height: {Space.x2};"></div>', unsafe_allow_html=True)
 
-    CARD_DATA = [
-        ("Heart / ECG", "icon-ecg", "❤️", "Heart / ECG Analysis",
-         "Upload 12-lead ECG recordings for real-time arrhythmia classification. Get heart rate, HRV metrics, and diagnostic probabilities.", "1D CNN Model"),
-        ("Chest X-Ray", "icon-xray", "🫁", "Chest X-Ray Analysis",
-         "Upload frontal chest X-ray images for pneumonia detection and multi-label disease classification.", "Transfer Learning"),
-        ("Health Risk Assessment", "icon-risk", "📊", "Health Risk Assessment",
-         "Interactive step-by-step questionnaire to generate a heart disease risk score with interactive charts.", "Ensemble (XGB+LGBM+GBM)"),
-        ("CBC Analysis", "icon-cbc", "🩸", "CBC Analysis",
-         "Enter complete blood count values for automated classification, WBC differential visualization, and clinical interpretation.", "Clinical Algorithm"),
-        ("Diabetes Screening", "icon-diabetes", "🍩", "Diabetes Screening",
-         "Comprehensive diabetes risk assessment using HbA1c, fasting glucose, and the validated FINDRISC questionnaire.", "FINDRISC"),
-        ("Lipid Panel / CV Risk", "icon-lipid", "🫀", "Lipid Panel / CV Risk",
-         "Lipid classification per ATP III guidelines with 10-year ASCVD risk estimation using Pooled Cohort Equations.", "Pooled Cohort Equations"),
-        ("Kidney Function", "icon-kidney", "🫘", "Kidney Function",
-         "CKD-EPI 2021 race-free eGFR with KDIGO staging, albuminuria assessment, and risk classification.", "CKD-EPI 2021"),
-        ("Lab Report Upload", "icon-lab", "📄", "Lab Report Upload",
-         "Upload lab report PDFs for automated parsing and analysis. Get color-coded flags for abnormal values.", "PDF Parsing"),
+    # ── Why Use This Portal ─────────────────────────────────────────
+    section_header(
+        "Why Use This Portal?",
+        subtitle="Built for students, researchers, and clinicians exploring AI in healthcare.",
+    )
+    _BENEFITS = [
+        ("⚡",  "Free & Instant",          "All 10 tools free, no registration. Results in seconds."),
+        ("🔬", "Research-Grade Models",    "Peer-reviewed ML architectures: CNNs, transfer learning, ensembles, with published accuracy."),
+        ("🧪", "Try Before You Upload",    "Every module ships with sample data so you can explore before uploading your own."),
+        ("📖", "Educational & Transparent","Each tool explains how its model works, what results mean, and what its limitations are."),
+        ("🔒", "Privacy First",            "Uploads processed in memory, never stored. No accounts, no tracking."),
+        ("🩺", "Clinically Relevant",      "Cardiology, radiology, hematology, nephrology, endocrinology — covered."),
+    ]
+    for row_start in range(0, len(_BENEFITS), 3):
+        cols = st.columns(3, gap="medium")
+        for col, (icon, title, desc) in zip(cols, _BENEFITS[row_start:row_start+3]):
+            with col:
+                feature_card(icon=icon, title=title, desc=desc)
+        if row_start + 3 < len(_BENEFITS):
+            st.markdown(f'<div style="height: {Space.md};"></div>', unsafe_allow_html=True)
+
+    st.markdown(f'<div style="height: {Space.x2};"></div>', unsafe_allow_html=True)
+
+    # ── The 8 clinical modules (nav cards) ──────────────────────────
+    section_header(
+        "Clinical Modules",
+        subtitle="Pick a tool to begin. Every module has sample data ready to try.",
+    )
+
+    # (nav_key, icon_bg_color, emoji, title, description, tag)
+    _MODULES = [
+        ("Heart / ECG",             Color.accent_ecg,      "❤️",  "Heart / ECG Analysis",
+         "Upload 12-lead ECG recordings for real-time arrhythmia classification with HRV metrics.",
+         "1D CNN Model"),
+        ("Chest X-Ray",             Color.accent_xray,     "🫁",  "Chest X-Ray Analysis",
+         "Upload frontal chest X-ray images for pneumonia detection and multi-label disease classification.",
+         "Transfer Learning"),
+        ("Health Risk Assessment",  Color.accent_risk,     "📊", "Health Risk Assessment",
+         "Step-by-step questionnaire that generates a heart-disease risk score with interactive charts.",
+         "Ensemble (XGB + LGBM + GBM)"),
+        ("CBC Analysis",            Color.accent_cbc,      "🩸", "CBC Analysis",
+         "Enter complete-blood-count values for automated classification, WBC differentials, and clinical interpretation.",
+         "Clinical Algorithm"),
+        ("Diabetes Screening",      Color.accent_diabetes, "🍩", "Diabetes Screening",
+         "Comprehensive risk assessment using HbA1c, fasting glucose, and the validated FINDRISC questionnaire.",
+         "FINDRISC"),
+        ("Lipid Panel / CV Risk",   Color.accent_lipid,    "🫀", "Lipid Panel / CV Risk",
+         "Lipid classification per ATP III + 10-year ASCVD risk via Pooled Cohort Equations.",
+         "Pooled Cohort Equations"),
+        ("Kidney Function",         Color.accent_kidney,   "🫘", "Kidney Function",
+         "Race-free eGFR (CKD-EPI 2021) with KDIGO staging and albuminuria risk classification.",
+         "CKD-EPI 2021"),
+        ("Lab Report Upload",       Color.accent_lab,      "📄", "Lab Report Upload",
+         "Upload lab report PDFs for automated parsing and color-coded abnormal-value flags.",
+         "PDF Parsing"),
     ]
 
-    for row_start in range(0, len(CARD_DATA), 3):
+    def _soft(hex_color: str, alpha: float = 0.15) -> str:
+        """Return an rgba() with the given alpha, accepting '#RRGGBB'."""
+        r, g, b = int(hex_color[1:3], 16), int(hex_color[3:5], 16), int(hex_color[5:7], 16)
+        return f"rgba({r}, {g}, {b}, {alpha})"
+
+    for row_start in range(0, len(_MODULES), 3):
         cols = st.columns(3, gap="medium")
-        for i, col in enumerate(cols):
-            idx = row_start + i
-            if idx < len(CARD_DATA):
-                nav_key, icon_cls, emoji, title, desc, tag = CARD_DATA[idx]
-                with col:
-                    # Fixed-height card HTML so buttons align across columns
-                    st.markdown(f"""
-                    <div style="background: #1E293B; border-radius: 16px; padding: 28px 24px; border: 1px solid #334155; min-height: 270px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: all 0.3s ease; margin-bottom: 8px;">
-                        <div>
-                            <div class="feature-icon {icon_cls}">{emoji}</div>
-                            <h3 style="font-size: 1.1rem; font-weight: 700; color: #F1F5F9; margin: 0 0 8px 0;">{title}</h3>
-                            <p style="color: #94A3B8; font-size: 0.88rem; line-height: 1.55; margin: 0;">{desc}</p>
-                        </div>
-                        <span class="feature-tag">{tag}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    st.button(
-                        f"Open {title}",
-                        key=f"nav_{nav_key}",
-                        use_container_width=True,
-                        on_click=navigate_to,
-                        args=(nav_key,),
-                    )
-        if row_start + 3 < len(CARD_DATA):
-            st.markdown("<br>", unsafe_allow_html=True)
+        for col, module in zip(cols, _MODULES[row_start:row_start+3]):
+            nav_key, accent, emoji, title, desc, tag = module
+            with col:
+                feature_card(
+                    icon=emoji,
+                    title=title,
+                    desc=desc,
+                    tag=tag,
+                    icon_bg=_soft(accent, 0.15),
+                )
+                st.button(
+                    f"Open {title}",
+                    key=f"nav_{nav_key}",
+                    use_container_width=True,
+                    on_click=navigate_to,
+                    args=(nav_key,),
+                )
+        if row_start + 3 < len(_MODULES):
+            st.markdown(f'<div style="height: {Space.md};"></div>', unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(f'<div style="height: {Space.x2};"></div>', unsafe_allow_html=True)
 
-    # Dataset info row
-    st.markdown('<p class="section-header">Datasets & Models</p>', unsafe_allow_html=True)
-    col1, col2, col3 = st.columns(3, gap="medium")
-    with col1:
-        st.markdown("""
-        <div class="info-card">
-            <h4>PTB-XL Dataset</h4>
-            <p>21,837 clinical 12-lead ECGs (10s, 500Hz) from PhysioNet. Annotated with
-            SCP-ECG diagnostic statements across 5 superclasses.</p>
-        </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        st.markdown("""
-        <div class="info-card">
-            <h4>NIH Chest X-ray14</h4>
-            <p>112,120 frontal-view chest X-rays with 14 disease labels.
-            Binary pneumonia classifier trained via MobileNetV2 transfer learning.</p>
-        </div>
-        """, unsafe_allow_html=True)
-    with col3:
-        st.markdown("""
-        <div class="info-card">
-            <h4>UCI Heart Disease</h4>
-            <p>920 patient records with 13 clinical features.
-            Ensemble classifier with hyperparameter tuning achieves 90%+ accuracy.</p>
-        </div>
-        """, unsafe_allow_html=True)
+    # ── Datasets & Models ───────────────────────────────────────────
+    section_header(
+        "Datasets & Models",
+        subtitle="Public, peer-reviewed datasets powering each module.",
+    )
+    _DATASETS = [
+        ("📚", "PTB-XL Dataset",
+         "21,837 clinical 12-lead ECGs (10s, 500Hz) from PhysioNet. Annotated with "
+         "SCP-ECG diagnostic statements across 5 superclasses.",
+         "ECG / Cardiology"),
+        ("🖼️", "NIH Chest X-ray14",
+         "112,120 frontal-view chest X-rays with 14 disease labels. Binary pneumonia "
+         "classifier trained via MobileNetV2 transfer learning.",
+         "Radiology"),
+        ("📈", "UCI Heart Disease",
+         "920 patient records with 13 clinical features. Ensemble classifier with "
+         "hyperparameter tuning achieves 90%+ accuracy.",
+         "Cardiology"),
+    ]
+    _ds_cols = st.columns(3, gap="medium")
+    for col, (icon, title, desc, tag) in zip(_ds_cols, _DATASETS):
+        with col:
+            feature_card(icon=icon, title=title, desc=desc, tag=tag)
 
 
 # ============================================================
@@ -1010,8 +1050,11 @@ if section == "Home":
 elif section == "Heart / ECG":
     st.button("← Back to Home", key="back_home_ecg", on_click=navigate_to, args=("Home",))
     st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Heart / ECG Analysis</strong></p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-header">Heart / ECG Analysis</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Upload a 12-lead ECG recording, try a sample, or explore the demo analysis.</p>', unsafe_allow_html=True)
+    section_header(
+        "Heart / ECG Analysis",
+        subtitle="Upload a 12-lead ECG recording, try a sample, or explore the demo analysis.",
+        eyebrow="Cardiology",
+    )
     st.markdown("""
     <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Upload your ECG file or try sample data → 2️⃣ Click Analyze → 3️⃣ View arrhythmia classification
@@ -1114,13 +1157,11 @@ elif section == "Heart / ECG":
                     confidence = float(preds[pred_idx]) * 100
 
                 st.success("ECG analysis complete!")
-
-                st.markdown(f"""
-                <div class="result-box">
-                    <h2>{class_names[pred_idx]}</h2>
-                    <p>Confidence: {confidence:.1f}%</p>
-                </div>
-                """, unsafe_allow_html=True)
+                result_card(
+                    title=class_names[pred_idx],
+                    subtitle=f"Confidence: {confidence:.1f}%",
+                    variant="info",
+                )
 
                 probs_df = pd.DataFrame({
                     "Condition": class_names,
@@ -1286,8 +1327,11 @@ elif section == "Heart / ECG":
 elif section == "Chest X-Ray":
     st.button("← Back to Home", key="back_home_xray", on_click=navigate_to, args=("Home",))
     st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Chest X-Ray Analysis</strong></p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-header">Chest X-Ray Analysis</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Upload a frontal chest X-ray, try a sample image, or view a demo prediction.</p>', unsafe_allow_html=True)
+    section_header(
+        "Chest X-Ray Analysis",
+        subtitle="Upload a frontal chest X-ray, try a sample image, or view a demo prediction.",
+        eyebrow="Radiology",
+    )
     st.markdown("""
     <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Upload a chest X-ray image or try sample data → 2️⃣ Click Analyze → 3️⃣ View pneumonia detection results
@@ -1401,12 +1445,11 @@ elif section == "Chest X-Ray":
                 except Exception as e:
                     st.error(f"Prediction error: {e}")
             else:
-                st.markdown("""
-                <div class="result-box">
-                    <h2>Demo Mode</h2>
-                    <p>X-ray model not loaded. Showing sample prediction.</p>
-                </div>
-                """, unsafe_allow_html=True)
+                result_card(
+                    title="Demo Mode",
+                    subtitle="X-ray model not loaded. Showing sample prediction.",
+                    variant="warning",
+                )
                 demo_data = pd.DataFrame({
                     "Condition": ["Normal", "Pneumonia"],
                     "Probability (%)": [82.3, 17.7]
@@ -1479,8 +1522,11 @@ elif section == "Chest X-Ray":
 elif section == "Health Risk Assessment":
     st.button("← Back to Home", key="back_home_hra", on_click=navigate_to, args=("Home",))
     st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Health Risk Assessment</strong></p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-header">Health Risk Assessment</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Answer a few questions one step at a time to generate your heart disease risk prediction.</p>', unsafe_allow_html=True)
+    section_header(
+        "Health Risk Assessment",
+        subtitle="Answer a few questions one step at a time to generate your heart-disease risk prediction.",
+        eyebrow="Cardiovascular Risk",
+    )
     st.markdown("""
     <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Answer the health questionnaire → 2️⃣ Click Predict → 3️⃣ View your heart disease risk score
@@ -1925,8 +1971,11 @@ elif section == "Health Risk Assessment":
 elif section == "CBC Analysis":
     st.button("← Back to Home", key="back_home_cbc", on_click=navigate_to, args=("Home",))
     st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>CBC Analysis</strong></p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-header">CBC Analysis</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Enter complete blood count values for automated classification, differential visualization, and clinical interpretation.</p>', unsafe_allow_html=True)
+    section_header(
+        "CBC Analysis",
+        subtitle="Enter complete-blood-count values for automated classification, differential visualization, and clinical interpretation.",
+        eyebrow="Hematology",
+    )
     st.markdown("""
     <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Enter your blood count values → 2️⃣ Click Analyze → 3️⃣ View flagged abnormalities
@@ -2143,8 +2192,11 @@ elif section == "CBC Analysis":
 elif section == "Diabetes Screening":
     st.button("← Back to Home", key="back_home_diabetes", on_click=navigate_to, args=("Home",))
     st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Diabetes Screening</strong></p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-header">Diabetes Screening</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Comprehensive diabetes risk assessment using HbA1c, fasting glucose, and the FINDRISC questionnaire.</p>', unsafe_allow_html=True)
+    section_header(
+        "Diabetes Screening",
+        subtitle="Comprehensive diabetes risk assessment using HbA1c, fasting glucose, and the FINDRISC questionnaire.",
+        eyebrow="Endocrinology",
+    )
     st.markdown("""
     <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Enter your HbA1c, glucose, and demographics → 2️⃣ Click Screen → 3️⃣ View your diabetes risk
@@ -2349,8 +2401,11 @@ elif section == "Diabetes Screening":
 elif section == "Lipid Panel / CV Risk":
     st.button("← Back to Home", key="back_home_lipid", on_click=navigate_to, args=("Home",))
     st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lipid Panel / CV Risk</strong></p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-header">Lipid Panel / CV Risk</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Lipid classification and 10-year ASCVD risk estimation using the Pooled Cohort Equations.</p>', unsafe_allow_html=True)
+    section_header(
+        "Lipid Panel / CV Risk",
+        subtitle="Lipid classification and 10-year ASCVD risk estimation using the Pooled Cohort Equations.",
+        eyebrow="Preventive Cardiology",
+    )
     st.markdown("""
     <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Enter your cholesterol panel → 2️⃣ Click Assess Risk → 3️⃣ View ASCVD risk and lipid classification
@@ -2567,8 +2622,11 @@ elif section == "Lipid Panel / CV Risk":
 elif section == "Kidney Function":
     st.button("← Back to Home", key="back_home_kidney", on_click=navigate_to, args=("Home",))
     st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Kidney Function</strong></p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-header">Kidney Function</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">CKD-EPI 2021 race-free eGFR estimation with KDIGO staging and risk classification.</p>', unsafe_allow_html=True)
+    section_header(
+        "Kidney Function",
+        subtitle="CKD-EPI 2021 race-free eGFR estimation with KDIGO staging and risk classification.",
+        eyebrow="Nephrology",
+    )
     st.markdown("""
     <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Enter serum creatinine and demographics → 2️⃣ Click Calculate → 3️⃣ View eGFR and CKD staging
@@ -2797,8 +2855,11 @@ elif section == "Kidney Function":
 elif section == "Lab Report Upload":
     st.button("← Back to Home", key="back_home_lab", on_click=navigate_to, args=("Home",))
     st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lab Report Upload</strong></p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-header">Lab Report Upload</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Upload a lab report PDF for automated parsing, or explore the demo report with color-coded analysis.</p>', unsafe_allow_html=True)
+    section_header(
+        "Lab Report Upload",
+        subtitle="Upload a lab report PDF for automated parsing, or explore the demo report with color-coded analysis.",
+        eyebrow="Clinical Pathology",
+    )
     st.markdown("""
     <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Upload a PDF lab report → 2️⃣ Parsing happens automatically → 3️⃣ View flagged abnormal values
@@ -3010,8 +3071,11 @@ elif section == "Lab Report Upload":
 elif section == "AI Assistant":
     st.button("\u2190 Back to Home", key="back_home_ai", on_click=navigate_to, args=("Home",))
     st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>AI Assistant</strong></p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-header">AI Assistant</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Ask questions about this portal\'s features, tools, and how to interpret results.</p>', unsafe_allow_html=True)
+    section_header(
+        "AI Assistant",
+        subtitle="Ask questions about this portal's features, tools, and how to interpret results.",
+        eyebrow="Powered by Claude",
+    )
     st.markdown("""
     <div style="background: rgba(56,189,248,0.08); border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #38BDF8;">
         <strong>Quick Start:</strong> 1️⃣ Type your question below → 2️⃣ The assistant will help you navigate the portal
@@ -3114,8 +3178,11 @@ elif section == "AI Assistant":
 elif section == "Privacy & Compliance":
     st.button("← Back to Home", key="back_home_privacy", on_click=navigate_to, args=("Home",))
     st.markdown('<p style="color: #64748B; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Privacy & Compliance</strong></p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-header">Privacy & HIPAA Compliance</p>', unsafe_allow_html=True)
-    st.markdown('<p class="section-sub">Information about data handling, privacy practices, and regulatory compliance.</p>', unsafe_allow_html=True)
+    section_header(
+        "Privacy & HIPAA Compliance",
+        subtitle="Information about data handling, privacy practices, and regulatory compliance.",
+        eyebrow="Trust & Safety",
+    )
 
     st.markdown("""
     <div class="info-card">
