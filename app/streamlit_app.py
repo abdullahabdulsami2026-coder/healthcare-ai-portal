@@ -908,13 +908,12 @@ elif section == "Chest X-Ray":
             img = Image.open(uploaded_xray)
             run_xray_prediction(img, "Uploaded")
         else:
-            st.markdown("""
-            <div class="upload-zone">
-                <div class="upload-icon">🫁</div>
-                <div class="upload-text">Upload a chest X-ray image<br>
-                <small>PNG or JPEG format</small></div>
-            </div>
-            """, unsafe_allow_html=True)
+            upload_hint(
+                icon_key="scan",
+                title="Upload a chest X-ray image",
+                desc="",
+                formats="PNG · JPEG",
+            )
 
     # --- Sample Data Tab ---
     with tab_sample:
@@ -1064,11 +1063,13 @@ elif section == "Health Risk Assessment":
             ]
             for i, (opt, desc) in enumerate(zip(cp_options, cp_descriptions)):
                 with cp_cols[i % 2]:
+                    selected = (st.session_state.hra_cp == opt)
                     if st.button(
-                        f"{'✅ ' if st.session_state.hra_cp == opt else ''}{opt}",
+                        f"{'• ' if selected else ''}{opt}",
                         key=f"cp_{opt}",
                         use_container_width=True,
                         help=desc,
+                        type=("primary" if selected else "secondary"),
                     ):
                         st.session_state.hra_cp = opt
                         st.rerun()
@@ -1095,11 +1096,11 @@ elif section == "Health Risk Assessment":
             )
             bp_val = st.session_state.hra_trestbps
             if bp_val < 120:
-                st.markdown('<span class="status-badge status-loaded">Normal</span>', unsafe_allow_html=True)
+                st.markdown(status_badge("Normal", variant="success"), unsafe_allow_html=True)
             elif bp_val < 140:
-                st.markdown('<span class="status-badge status-demo">Elevated</span>', unsafe_allow_html=True)
+                st.markdown(status_badge("Elevated", variant="warning"), unsafe_allow_html=True)
             else:
-                st.markdown('<span class="flag-critical">High</span>', unsafe_allow_html=True)
+                st.markdown(status_badge("High", variant="danger"), unsafe_allow_html=True)
 
             st.session_state.hra_chol = st.slider(
                 "Total Cholesterol (mg/dL)", 100, 600, st.session_state.hra_chol, key="hra_chol_slider"
@@ -2185,13 +2186,12 @@ elif section == "Kidney Function":
                                        height=320, template="plotly_dark", font=dict(family="Inter"), yaxis_title="eGFR (mL/min/1.73m\u00b2)", showlegend=False)
                 st.plotly_chart(fig_comp, use_container_width=True, key="kidney_comparison_chart")
             else:
-                st.markdown("""
-                <div class="info-card">
-                    <h4>Cystatin C Comparison</h4>
-                    <p>Enable Cystatin C input to see a comparison between creatinine-based
-                    and cystatin C-based eGFR estimates.</p>
-                </div>
-                """, unsafe_allow_html=True)
+                info_callout(
+                    title="Cystatin C Comparison",
+                    body=("Enable Cystatin C input to see a comparison between "
+                          "creatinine-based and cystatin C-based eGFR estimates."),
+                    variant="info",
+                )
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -2396,7 +2396,11 @@ elif section == "Lab Report Upload":
 
             st.markdown("<br>", unsafe_allow_html=True)
             if used_demo:
-                st.markdown('<div class="info-card"><h4>Demo Lab Report</h4><p>Displaying sample lab data for demonstration. Upload a PDF to analyze your own report.</p></div>', unsafe_allow_html=True)
+                info_callout(
+                    title="Demo Lab Report",
+                    body="Displaying sample lab data for demonstration. Upload a PDF to analyze your own report.",
+                    variant="info",
+                )
 
             table_rows = ""
             for r in results:
@@ -2579,13 +2583,13 @@ elif section == "Privacy & Compliance":
         eyebrow="Trust & Safety",
     )
 
-    st.markdown("""
-    <div class="info-card">
-        <h4>Data Privacy Statement</h4>
-        <p>This application is designed for <strong>educational and research purposes only</strong>.
-        It is not a HIPAA-covered entity and should not be used for clinical decision-making with real patient data.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    info_callout(
+        title="Data Privacy Statement",
+        body=("This application is designed for educational and research purposes only. "
+              "It is not a HIPAA-covered entity and should not be used for clinical "
+              "decision-making with real patient data."),
+        variant="warning",
+    )
 
     st.markdown("### Key Privacy Principles")
 
