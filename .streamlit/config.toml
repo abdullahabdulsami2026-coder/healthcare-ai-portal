@@ -1,6 +1,7 @@
 [theme]
-primaryColor = "#38BDF8"
-backgroundColor = "#0F172A"
-secondaryBackgroundColor = "#1E293B"
-textColor = "#F1F5F9"
-font = "sans serif"
+# Claude-inspired warm editorial palette
+primaryColor             = "#C15F3C"  # terracotta
+backgroundColor          = "#FAF9F5"  # warm cream canvas
+secondaryBackgroundColor = "#FFFFFF"  # pure-white cards lift gently off the cream
+textColor                = "#141413"  # near-black for serious reading
+font                     = "sans serif"
