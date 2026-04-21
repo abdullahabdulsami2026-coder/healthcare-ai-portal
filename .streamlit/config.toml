@@ -1,7 +1,7 @@
 [theme]
-# Claude-inspired warm editorial palette
-primaryColor             = "#C15F3C"  # terracotta
-backgroundColor          = "#FAF9F5"  # warm cream canvas
-secondaryBackgroundColor = "#FFFFFF"  # pure-white cards lift gently off the cream
-textColor                = "#141413"  # near-black for serious reading
+# Northwestern premium dark — NU purple on deep charcoal
+primaryColor             = "#4E2A84"  # Northwestern Purple (official)
+backgroundColor          = "#0A0A0B"  # near-black, warm undertone (not pure black)
+secondaryBackgroundColor = "#131316"  # elevated surface for cards
+textColor                = "#FAFAFA"  # gray_50
 font                     = "sans serif"

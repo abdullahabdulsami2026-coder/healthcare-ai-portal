@@ -499,14 +499,14 @@ if section == "Home":
 # ============================================================
 elif section == "Heart / ECG":
     st.button("← Back to Home", key="back_home_ecg", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #8F8778; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Heart / ECG Analysis</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Heart / ECG Analysis</strong></p>', unsafe_allow_html=True)
     section_header(
         "Heart / ECG Analysis",
         subtitle="Upload a 12-lead ECG recording, try a sample, or explore the demo analysis.",
         eyebrow="Cardiology",
     )
     st.markdown("""
-    <div style="background: rgba(193, 95, 60, 0.08); border: 1px solid #E8E3D3; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #C15F3C;">
+    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
         <strong>Quick Start:</strong> 1️⃣ Upload your ECG file or try sample data → 2️⃣ Click Analyze → 3️⃣ View arrhythmia classification
     </div>
     """, unsafe_allow_html=True)
@@ -620,7 +620,7 @@ elif section == "Heart / ECG":
                 fig_p = px.bar(
                     probs_df, x="Probability (%)", y="Condition",
                     orientation="h", color="Probability (%)",
-                    color_continuous_scale=["#FFFFFF", "#C15F3C"],
+                    color_continuous_scale=["#131316", "#836EAA"],
                 )
                 fig_p.update_layout(height=300, template="plotly_dark", font=dict(family="Inter"))
                 st.plotly_chart(fig_p, use_container_width=True, key="ecg_probability_model")
@@ -639,7 +639,7 @@ elif section == "Heart / ECG":
             fig_p = px.bar(
                 demo_probs, x="Probability (%)", y="Condition",
                 orientation="h", color="Probability (%)",
-                color_continuous_scale=["#FFFFFF", "#C15F3C"],
+                color_continuous_scale=["#131316", "#836EAA"],
             )
             fig_p.update_layout(height=260, template="plotly_dark", font=dict(family="Inter"), showlegend=False)
             st.plotly_chart(fig_p, use_container_width=True, key="ecg_probability_sample")
@@ -647,10 +647,10 @@ elif section == "Heart / ECG":
     # --- Upload Tab ---
     with tab_upload:
         st.markdown("""
-        <div style="text-align: center; padding: 32px 20px; background: #FFFFFF; border-radius: 12px; border: 2px dashed #E8E3D3; margin-bottom: 16px;">
+        <div style="text-align: center; padding: 32px 20px; background: #131316; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.10); margin-bottom: 16px;">
             <div style="font-size: 2.5rem; margin-bottom: 8px;">📈</div>
-            <p style="color: #615C50; font-size: 0.95rem; margin: 0;">Upload a 12-lead ECG recording to get instant arrhythmia classification</p>
-            <p style="color: #8F8778; font-size: 0.82rem; margin: 4px 0 0;">Supported formats: CSV, DAT, HEA, NPY</p>
+            <p style="color: #A1A1AA; font-size: 0.95rem; margin: 0;">Upload a 12-lead ECG recording to get instant arrhythmia classification</p>
+            <p style="color: #71717A; font-size: 0.82rem; margin: 4px 0 0;">Supported formats: CSV, DAT, HEA, NPY</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -755,7 +755,7 @@ elif section == "Heart / ECG":
         fig_p = px.bar(
             demo_probs, x="Probability (%)", y="Condition",
             orientation="h", color="Probability (%)",
-            color_continuous_scale=["#FFFFFF", "#C15F3C"],
+            color_continuous_scale=["#131316", "#836EAA"],
         )
         fig_p.update_layout(height=260, template="plotly_dark", font=dict(family="Inter"), showlegend=False)
         st.plotly_chart(fig_p, use_container_width=True, key="ecg_demo_probability")
@@ -776,14 +776,14 @@ elif section == "Heart / ECG":
 # ============================================================
 elif section == "Chest X-Ray":
     st.button("← Back to Home", key="back_home_xray", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #8F8778; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Chest X-Ray Analysis</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Chest X-Ray Analysis</strong></p>', unsafe_allow_html=True)
     section_header(
         "Chest X-Ray Analysis",
         subtitle="Upload a frontal chest X-ray, try a sample image, or view a demo prediction.",
         eyebrow="Radiology",
     )
     st.markdown("""
-    <div style="background: rgba(193, 95, 60, 0.08); border: 1px solid #E8E3D3; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #C15F3C;">
+    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
         <strong>Quick Start:</strong> 1️⃣ Upload a chest X-ray image or try sample data → 2️⃣ Click Analyze → 3️⃣ View pneumonia detection results
     </div>
     """, unsafe_allow_html=True)
@@ -912,10 +912,10 @@ elif section == "Chest X-Ray":
     # --- Upload Tab ---
     with tab_upload:
         st.markdown("""
-        <div style="text-align: center; padding: 32px 20px; background: #FFFFFF; border-radius: 12px; border: 2px dashed #E8E3D3; margin-bottom: 16px;">
+        <div style="text-align: center; padding: 32px 20px; background: #131316; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.10); margin-bottom: 16px;">
             <div style="font-size: 2.5rem; margin-bottom: 8px;">🫁</div>
-            <p style="color: #615C50; font-size: 0.95rem; margin: 0;">Upload a frontal chest X-ray for AI-powered pneumonia detection</p>
-            <p style="color: #8F8778; font-size: 0.82rem; margin: 4px 0 0;">Supported formats: PNG, JPEG</p>
+            <p style="color: #A1A1AA; font-size: 0.95rem; margin: 0;">Upload a frontal chest X-ray for AI-powered pneumonia detection</p>
+            <p style="color: #71717A; font-size: 0.82rem; margin: 4px 0 0;">Supported formats: PNG, JPEG</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -971,14 +971,14 @@ elif section == "Chest X-Ray":
 # ============================================================
 elif section == "Health Risk Assessment":
     st.button("← Back to Home", key="back_home_hra", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #8F8778; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Health Risk Assessment</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Health Risk Assessment</strong></p>', unsafe_allow_html=True)
     section_header(
         "Health Risk Assessment",
         subtitle="Answer a few questions one step at a time to generate your heart-disease risk prediction.",
         eyebrow="Cardiovascular Risk",
     )
     st.markdown("""
-    <div style="background: rgba(193, 95, 60, 0.08); border: 1px solid #E8E3D3; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #C15F3C;">
+    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
         <strong>Quick Start:</strong> 1️⃣ Answer the health questionnaire → 2️⃣ Click Predict → 3️⃣ View your heart disease risk score
     </div>
     """, unsafe_allow_html=True)
@@ -1420,14 +1420,14 @@ elif section == "Health Risk Assessment":
 # ============================================================
 elif section == "CBC Analysis":
     st.button("← Back to Home", key="back_home_cbc", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #8F8778; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>CBC Analysis</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>CBC Analysis</strong></p>', unsafe_allow_html=True)
     section_header(
         "CBC Analysis",
         subtitle="Enter complete-blood-count values for automated classification, differential visualization, and clinical interpretation.",
         eyebrow="Hematology",
     )
     st.markdown("""
-    <div style="background: rgba(193, 95, 60, 0.08); border: 1px solid #E8E3D3; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #C15F3C;">
+    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
         <strong>Quick Start:</strong> 1️⃣ Enter your blood count values → 2️⃣ Click Analyze → 3️⃣ View flagged abnormalities
     </div>
     """, unsafe_allow_html=True)
@@ -1641,14 +1641,14 @@ elif section == "CBC Analysis":
 # ============================================================
 elif section == "Diabetes Screening":
     st.button("← Back to Home", key="back_home_diabetes", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #8F8778; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Diabetes Screening</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Diabetes Screening</strong></p>', unsafe_allow_html=True)
     section_header(
         "Diabetes Screening",
         subtitle="Comprehensive diabetes risk assessment using HbA1c, fasting glucose, and the FINDRISC questionnaire.",
         eyebrow="Endocrinology",
     )
     st.markdown("""
-    <div style="background: rgba(193, 95, 60, 0.08); border: 1px solid #E8E3D3; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #C15F3C;">
+    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
         <strong>Quick Start:</strong> 1️⃣ Enter your HbA1c, glucose, and demographics → 2️⃣ Click Screen → 3️⃣ View your diabetes risk
     </div>
     """, unsafe_allow_html=True)
@@ -1850,14 +1850,14 @@ elif section == "Diabetes Screening":
 # ============================================================
 elif section == "Lipid Panel / CV Risk":
     st.button("← Back to Home", key="back_home_lipid", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #8F8778; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lipid Panel / CV Risk</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lipid Panel / CV Risk</strong></p>', unsafe_allow_html=True)
     section_header(
         "Lipid Panel / CV Risk",
         subtitle="Lipid classification and 10-year ASCVD risk estimation using the Pooled Cohort Equations.",
         eyebrow="Preventive Cardiology",
     )
     st.markdown("""
-    <div style="background: rgba(193, 95, 60, 0.08); border: 1px solid #E8E3D3; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #C15F3C;">
+    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
         <strong>Quick Start:</strong> 1️⃣ Enter your cholesterol panel → 2️⃣ Click Assess Risk → 3️⃣ View ASCVD risk and lipid classification
     </div>
     """, unsafe_allow_html=True)
@@ -2071,14 +2071,14 @@ elif section == "Lipid Panel / CV Risk":
 # ============================================================
 elif section == "Kidney Function":
     st.button("← Back to Home", key="back_home_kidney", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #8F8778; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Kidney Function</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Kidney Function</strong></p>', unsafe_allow_html=True)
     section_header(
         "Kidney Function",
         subtitle="CKD-EPI 2021 race-free eGFR estimation with KDIGO staging and risk classification.",
         eyebrow="Nephrology",
     )
     st.markdown("""
-    <div style="background: rgba(193, 95, 60, 0.08); border: 1px solid #E8E3D3; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #C15F3C;">
+    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
         <strong>Quick Start:</strong> 1️⃣ Enter serum creatinine and demographics → 2️⃣ Click Calculate → 3️⃣ View eGFR and CKD staging
     </div>
     """, unsafe_allow_html=True)
@@ -2304,14 +2304,14 @@ elif section == "Kidney Function":
 # ============================================================
 elif section == "Lab Report Upload":
     st.button("← Back to Home", key="back_home_lab", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #8F8778; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lab Report Upload</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lab Report Upload</strong></p>', unsafe_allow_html=True)
     section_header(
         "Lab Report Upload",
         subtitle="Upload a lab report PDF for automated parsing, or explore the demo report with color-coded analysis.",
         eyebrow="Clinical Pathology",
     )
     st.markdown("""
-    <div style="background: rgba(193, 95, 60, 0.08); border: 1px solid #E8E3D3; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #C15F3C;">
+    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
         <strong>Quick Start:</strong> 1️⃣ Upload a PDF lab report → 2️⃣ Parsing happens automatically → 3️⃣ View flagged abnormal values
     </div>
     """, unsafe_allow_html=True)
@@ -2363,10 +2363,10 @@ elif section == "Lab Report Upload":
     """, unsafe_allow_html=True)
 
     st.markdown("""
-    <div style="text-align: center; padding: 32px 20px; background: #FFFFFF; border-radius: 12px; border: 2px dashed #E8E3D3; margin-bottom: 16px;">
+    <div style="text-align: center; padding: 32px 20px; background: #131316; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.10); margin-bottom: 16px;">
         <div style="font-size: 2.5rem; margin-bottom: 8px;">📋</div>
-        <p style="color: #615C50; font-size: 0.95rem; margin: 0;">Upload a lab report PDF for automated value extraction and analysis</p>
-        <p style="color: #8F8778; font-size: 0.82rem; margin: 4px 0 0;">Supported format: PDF</p>
+        <p style="color: #A1A1AA; font-size: 0.95rem; margin: 0;">Upload a lab report PDF for automated value extraction and analysis</p>
+        <p style="color: #71717A; font-size: 0.82rem; margin: 4px 0 0;">Supported format: PDF</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -2520,14 +2520,14 @@ elif section == "Lab Report Upload":
 # ============================================================
 elif section == "AI Assistant":
     st.button("\u2190 Back to Home", key="back_home_ai", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #8F8778; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>AI Assistant</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>AI Assistant</strong></p>', unsafe_allow_html=True)
     section_header(
         "AI Assistant",
         subtitle="Ask questions about this portal's features, tools, and how to interpret results.",
         eyebrow="Powered by Claude",
     )
     st.markdown("""
-    <div style="background: rgba(193, 95, 60, 0.08); border: 1px solid #E8E3D3; border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #C15F3C;">
+    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
         <strong>Quick Start:</strong> 1️⃣ Type your question below → 2️⃣ The assistant will help you navigate the portal
     </div>
     """, unsafe_allow_html=True)
@@ -2627,7 +2627,7 @@ elif section == "AI Assistant":
 # ============================================================
 elif section == "Privacy & Compliance":
     st.button("← Back to Home", key="back_home_privacy", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #8F8778; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Privacy & Compliance</strong></p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Privacy & Compliance</strong></p>', unsafe_allow_html=True)
     section_header(
         "Privacy & HIPAA Compliance",
         subtitle="Information about data handling, privacy practices, and regulatory compliance.",
