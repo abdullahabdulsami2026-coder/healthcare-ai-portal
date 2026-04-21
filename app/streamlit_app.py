@@ -233,7 +233,7 @@ with st.sidebar:
     st.markdown(f"""
     <div style="text-align:center; padding: 4px 0 12px;">
         <div style="font-size: 2rem; margin-bottom: 2px;">🏥</div>
-        <div style="font-size: 1.05rem; font-weight: 800; color: {Color.brand};
+        <div style="font-size: 1.05rem; font-weight: 800; color: {Color.accent_bright};
                     letter-spacing: -0.02em;">Healthcare AI</div>
         <div style="font-size: 0.75rem; font-weight: 500; color: {Color.text_muted};
                     text-transform: uppercase; letter-spacing: 0.08em;">
