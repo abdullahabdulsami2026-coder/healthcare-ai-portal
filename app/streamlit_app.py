@@ -45,7 +45,8 @@ from utils.clinical_calculators import (
 from utils.design import (
     inject_global_css,
     hero, section_header, feature_card, metric_card, result_card,
-    info_callout, status_badge, disclaimer, page_divider, footer,
+    info_callout, status_badge, risk_bar, breadcrumb, upload_hint,
+    disclaimer, page_divider, footer, icon,
     Color, Space, Radius,
 )
 
@@ -341,70 +342,74 @@ if section == "Home":
         "How It Works",
         subtitle="AI-powered clinical insights in four simple steps.",
     )
+    # (step_number, icon_key, title, description)
     _STEPS = [
-        ("1", "🔍", "Browse modules",       "Explore 10 clinical AI tools below."),
-        ("2", "👆", "Select a module",      "Click 'Open' on any card to begin."),
-        ("3", "📤", "Upload or try sample", "Provide your data or use the built-in samples."),
-        ("4", "📊", "View results",         "Get predictions with visual explanations in seconds."),
+        ("01", "search",              "Browse modules",       "Explore 10 clinical AI tools below."),
+        ("02", "mouse-pointer-click", "Select a module",      "Click 'Open' on any card to begin."),
+        ("03", "upload",              "Upload or try sample", "Provide your data or use the built-in samples."),
+        ("04", "bar-chart",           "View results",         "Get predictions with visual explanations in seconds."),
     ]
     _step_cols = st.columns(4, gap="medium")
-    for (col, (num, icon, title, desc)) in zip(_step_cols, _STEPS):
+    for (col, (num, icon_key, title, desc)) in zip(_step_cols, _STEPS):
         with col:
+            icon_svg = icon(icon_key, size=20)
             st.markdown(f"""
                 <div style="
-                    background: {Color.surface};
+                    background: {Color.bg_elevated};
                     border: 1px solid {Color.border};
-                    border-radius: {Radius.lg};
-                    padding: {Space.xl} {Space.lg};
-                    text-align: center;
+                    border-radius: {Radius.xl};
+                    padding: {Space.x6} {Space.x5};
                     height: 100%;
                     min-height: 180px;
-                    display: flex; flex-direction: column; align-items: center;
+                    display: flex; flex-direction: column;
                 ">
                     <div style="
-                        width: 40px; height: 40px;
-                        background: {Color.brand_soft};
-                        color: {Color.brand};
-                        border-radius: {Radius.pill};
-                        display: flex; align-items: center; justify-content: center;
-                        font-size: 0.95rem; font-weight: 700;
-                        margin-bottom: {Space.md};
-                        border: 1px solid {Color.border_strong};
-                    ">{num}</div>
-                    <div style="font-size: 1.5rem; margin-bottom: {Space.sm};">{icon}</div>
-                    <div style="font-size: 0.95rem; font-weight: 700;
-                                color: {Color.text_primary}; margin-bottom: 4px;">
+                        display: flex; align-items: center; gap: {Space.x3};
+                        margin-bottom: {Space.x5};
+                    ">
+                        <span style="
+                            font-family: 'JetBrains Mono', monospace;
+                            font-size: 0.72rem; font-weight: 600;
+                            letter-spacing: 0.1em;
+                            color: {Color.text_muted};
+                        ">{num}</span>
+                        <span style="color: {Color.accent_bright}; display: inline-flex;">{icon_svg}</span>
+                    </div>
+                    <div style="font-size: 1rem; font-weight: 600;
+                                color: {Color.text_primary}; margin-bottom: {Space.x1};
+                                letter-spacing: -0.01em;">
                         {title}
                     </div>
-                    <div style="font-size: 0.82rem; color: {Color.text_secondary};
+                    <div style="font-size: 0.88rem; color: {Color.text_secondary};
                                 line-height: 1.5;">{desc}</div>
                 </div>
             """, unsafe_allow_html=True)
 
-    st.markdown(f'<div style="height: {Space.x2};"></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="height: {Space.x7};"></div>', unsafe_allow_html=True)
 
     # ── Why Use This Portal ─────────────────────────────────────────
     section_header(
         "Why Use This Portal?",
         subtitle="Built for students, researchers, and clinicians exploring AI in healthcare.",
     )
+    # (icon_key, title, description)
     _BENEFITS = [
-        ("⚡",  "Free & Instant",          "All 10 tools free, no registration. Results in seconds."),
-        ("🔬", "Research-Grade Models",    "Peer-reviewed ML architectures: CNNs, transfer learning, ensembles, with published accuracy."),
-        ("🧪", "Try Before You Upload",    "Every module ships with sample data so you can explore before uploading your own."),
-        ("📖", "Educational & Transparent","Each tool explains how its model works, what results mean, and what its limitations are."),
-        ("🔒", "Privacy First",            "Uploads processed in memory, never stored. No accounts, no tracking."),
-        ("🩺", "Clinically Relevant",      "Cardiology, radiology, hematology, nephrology, endocrinology — covered."),
+        ("zap",           "Free & Instant",           "All 10 tools free, no registration. Results in seconds."),
+        ("microscope",    "Research-Grade Models",    "Peer-reviewed ML architectures: CNNs, transfer learning, ensembles, with published accuracy."),
+        ("test-tube",     "Try Before You Upload",    "Every module ships with sample data so you can explore before uploading your own."),
+        ("book",          "Educational & Transparent","Each tool explains how its model works, what results mean, and what its limitations are."),
+        ("lock",          "Privacy First",            "Uploads processed in memory, never stored. No accounts, no tracking."),
+        ("heart-pulse",   "Clinically Relevant",      "Cardiology, radiology, hematology, nephrology, endocrinology — covered."),
     ]
     for row_start in range(0, len(_BENEFITS), 3):
         cols = st.columns(3, gap="medium")
-        for col, (icon, title, desc) in zip(cols, _BENEFITS[row_start:row_start+3]):
+        for col, (icon_key, title, desc) in zip(cols, _BENEFITS[row_start:row_start+3]):
             with col:
-                feature_card(icon=icon, title=title, desc=desc)
+                feature_card(icon_key=icon_key, title=title, desc=desc)
         if row_start + 3 < len(_BENEFITS):
-            st.markdown(f'<div style="height: {Space.md};"></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="height: {Space.x3};"></div>', unsafe_allow_html=True)
 
-    st.markdown(f'<div style="height: {Space.x2};"></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="height: {Space.x7};"></div>', unsafe_allow_html=True)
 
     # ── The 8 clinical modules (nav cards) ──────────────────────────
     section_header(
@@ -412,50 +417,44 @@ if section == "Home":
         subtitle="Pick a tool to begin. Every module has sample data ready to try.",
     )
 
-    # (nav_key, icon_bg_color, emoji, title, description, tag)
+    # (nav_key, icon_key, title, description, tag)
     _MODULES = [
-        ("Heart / ECG",             Color.accent_ecg,      "❤️",  "Heart / ECG Analysis",
+        ("Heart / ECG",            "activity",        "Heart / ECG Analysis",
          "Upload 12-lead ECG recordings for real-time arrhythmia classification with HRV metrics.",
          "1D CNN Model"),
-        ("Chest X-Ray",             Color.accent_xray,     "🫁",  "Chest X-Ray Analysis",
+        ("Chest X-Ray",            "scan",            "Chest X-Ray Analysis",
          "Upload frontal chest X-ray images for pneumonia detection and multi-label disease classification.",
          "Transfer Learning"),
-        ("Health Risk Assessment",  Color.accent_risk,     "📊", "Health Risk Assessment",
+        ("Health Risk Assessment", "clipboard-check", "Health Risk Assessment",
          "Step-by-step questionnaire that generates a heart-disease risk score with interactive charts.",
          "Ensemble (XGB + LGBM + GBM)"),
-        ("CBC Analysis",            Color.accent_cbc,      "🩸", "CBC Analysis",
+        ("CBC Analysis",           "droplet",         "CBC Analysis",
          "Enter complete-blood-count values for automated classification, WBC differentials, and clinical interpretation.",
          "Clinical Algorithm"),
-        ("Diabetes Screening",      Color.accent_diabetes, "🍩", "Diabetes Screening",
+        ("Diabetes Screening",     "flask-conical",   "Diabetes Screening",
          "Comprehensive risk assessment using HbA1c, fasting glucose, and the validated FINDRISC questionnaire.",
          "FINDRISC"),
-        ("Lipid Panel / CV Risk",   Color.accent_lipid,    "🫀", "Lipid Panel / CV Risk",
+        ("Lipid Panel / CV Risk",  "heart-pulse",     "Lipid Panel / CV Risk",
          "Lipid classification per ATP III + 10-year ASCVD risk via Pooled Cohort Equations.",
          "Pooled Cohort Equations"),
-        ("Kidney Function",         Color.accent_kidney,   "🫘", "Kidney Function",
+        ("Kidney Function",        "activity-square", "Kidney Function",
          "Race-free eGFR (CKD-EPI 2021) with KDIGO staging and albuminuria risk classification.",
          "CKD-EPI 2021"),
-        ("Lab Report Upload",       Color.accent_lab,      "📄", "Lab Report Upload",
+        ("Lab Report Upload",      "file-text",       "Lab Report Upload",
          "Upload lab report PDFs for automated parsing and color-coded abnormal-value flags.",
          "PDF Parsing"),
     ]
 
-    def _soft(hex_color: str, alpha: float = 0.15) -> str:
-        """Return an rgba() with the given alpha, accepting '#RRGGBB'."""
-        r, g, b = int(hex_color[1:3], 16), int(hex_color[3:5], 16), int(hex_color[5:7], 16)
-        return f"rgba({r}, {g}, {b}, {alpha})"
-
     for row_start in range(0, len(_MODULES), 3):
         cols = st.columns(3, gap="medium")
         for col, module in zip(cols, _MODULES[row_start:row_start+3]):
-            nav_key, accent, emoji, title, desc, tag = module
+            nav_key, icon_key, title, desc, tag = module
             with col:
                 feature_card(
-                    icon=emoji,
+                    icon_key=icon_key,
                     title=title,
                     desc=desc,
                     tag=tag,
-                    icon_bg=_soft(accent, 0.15),
                 )
                 st.button(
                     f"Open {title}",
@@ -465,9 +464,9 @@ if section == "Home":
                     args=(nav_key,),
                 )
         if row_start + 3 < len(_MODULES):
-            st.markdown(f'<div style="height: {Space.md};"></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="height: {Space.x3};"></div>', unsafe_allow_html=True)
 
-    st.markdown(f'<div style="height: {Space.x2};"></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="height: {Space.x7};"></div>', unsafe_allow_html=True)
 
     # ── Datasets & Models ───────────────────────────────────────────
     section_header(
@@ -475,23 +474,23 @@ if section == "Home":
         subtitle="Public, peer-reviewed datasets powering each module.",
     )
     _DATASETS = [
-        ("📚", "PTB-XL Dataset",
+        ("heart-pulse", "PTB-XL Dataset",
          "21,837 clinical 12-lead ECGs (10s, 500Hz) from PhysioNet. Annotated with "
          "SCP-ECG diagnostic statements across 5 superclasses.",
          "ECG / Cardiology"),
-        ("🖼️", "NIH Chest X-ray14",
+        ("scan", "NIH Chest X-ray14",
          "112,120 frontal-view chest X-rays with 14 disease labels. Binary pneumonia "
          "classifier trained via MobileNetV2 transfer learning.",
          "Radiology"),
-        ("📈", "UCI Heart Disease",
+        ("bar-chart", "UCI Heart Disease",
          "920 patient records with 13 clinical features. Ensemble classifier with "
          "hyperparameter tuning achieves 90%+ accuracy.",
          "Cardiology"),
     ]
     _ds_cols = st.columns(3, gap="medium")
-    for col, (icon, title, desc, tag) in zip(_ds_cols, _DATASETS):
+    for col, (icon_key, title, desc, tag) in zip(_ds_cols, _DATASETS):
         with col:
-            feature_card(icon=icon, title=title, desc=desc, tag=tag)
+            feature_card(icon_key=icon_key, title=title, desc=desc, tag=tag)
 
 
 # ============================================================
@@ -499,17 +498,13 @@ if section == "Home":
 # ============================================================
 elif section == "Heart / ECG":
     st.button("← Back to Home", key="back_home_ecg", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Heart / ECG Analysis</strong></p>', unsafe_allow_html=True)
+    breadcrumb("Heart / ECG Analysis")
     section_header(
         "Heart / ECG Analysis",
         subtitle="Upload a 12-lead ECG recording, try a sample, or explore the demo analysis.",
         eyebrow="Cardiology",
     )
-    st.markdown("""
-    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
-        <strong>Quick Start:</strong> 1️⃣ Upload your ECG file or try sample data → 2️⃣ Click Analyze → 3️⃣ View arrhythmia classification
-    </div>
-    """, unsafe_allow_html=True)
+    info_callout(title="Quick Start", body="Upload your ECG file or try sample data → Click Analyze → View arrhythmia classification", variant="info")
 
     with st.expander("About This Module"):
         st.write("""
@@ -646,13 +641,7 @@ elif section == "Heart / ECG":
 
     # --- Upload Tab ---
     with tab_upload:
-        st.markdown("""
-        <div style="text-align: center; padding: 32px 20px; background: #131316; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.10); margin-bottom: 16px;">
-            <div style="font-size: 2.5rem; margin-bottom: 8px;">📈</div>
-            <p style="color: #A1A1AA; font-size: 0.95rem; margin: 0;">Upload a 12-lead ECG recording to get instant arrhythmia classification</p>
-            <p style="color: #71717A; font-size: 0.82rem; margin: 4px 0 0;">Supported formats: CSV, DAT, HEA, NPY</p>
-        </div>
-        """, unsafe_allow_html=True)
+        upload_hint(icon_key="upload", title="Upload a 12-lead ECG recording to get instant arrhythmia classification", desc="", formats="CSV, DAT, HEA, NPY")
 
         uploaded_file = st.file_uploader(
             "Choose ECG file", type=["csv", "dat", "hea", "npy"],
@@ -776,17 +765,13 @@ elif section == "Heart / ECG":
 # ============================================================
 elif section == "Chest X-Ray":
     st.button("← Back to Home", key="back_home_xray", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Chest X-Ray Analysis</strong></p>', unsafe_allow_html=True)
+    breadcrumb("Chest X-Ray Analysis")
     section_header(
         "Chest X-Ray Analysis",
         subtitle="Upload a frontal chest X-ray, try a sample image, or view a demo prediction.",
         eyebrow="Radiology",
     )
-    st.markdown("""
-    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
-        <strong>Quick Start:</strong> 1️⃣ Upload a chest X-ray image or try sample data → 2️⃣ Click Analyze → 3️⃣ View pneumonia detection results
-    </div>
-    """, unsafe_allow_html=True)
+    info_callout(title="Quick Start", body="Upload a chest X-ray image or try sample data → Click Analyze → View pneumonia detection results", variant="info")
 
     with st.expander("About This Module"):
         st.write("""
@@ -911,13 +896,7 @@ elif section == "Chest X-Ray":
 
     # --- Upload Tab ---
     with tab_upload:
-        st.markdown("""
-        <div style="text-align: center; padding: 32px 20px; background: #131316; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.10); margin-bottom: 16px;">
-            <div style="font-size: 2.5rem; margin-bottom: 8px;">🫁</div>
-            <p style="color: #A1A1AA; font-size: 0.95rem; margin: 0;">Upload a frontal chest X-ray for AI-powered pneumonia detection</p>
-            <p style="color: #71717A; font-size: 0.82rem; margin: 4px 0 0;">Supported formats: PNG, JPEG</p>
-        </div>
-        """, unsafe_allow_html=True)
+        upload_hint(icon_key="scan", title="Upload a frontal chest X-ray for AI-powered pneumonia detection", desc="", formats="PNG, JPEG")
 
         uploaded_xray = st.file_uploader(
             "Choose X-ray image", type=["png", "jpg", "jpeg"],
@@ -971,17 +950,13 @@ elif section == "Chest X-Ray":
 # ============================================================
 elif section == "Health Risk Assessment":
     st.button("← Back to Home", key="back_home_hra", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Health Risk Assessment</strong></p>', unsafe_allow_html=True)
+    breadcrumb("Health Risk Assessment")
     section_header(
         "Health Risk Assessment",
         subtitle="Answer a few questions one step at a time to generate your heart-disease risk prediction.",
         eyebrow="Cardiovascular Risk",
     )
-    st.markdown("""
-    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
-        <strong>Quick Start:</strong> 1️⃣ Answer the health questionnaire → 2️⃣ Click Predict → 3️⃣ View your heart disease risk score
-    </div>
-    """, unsafe_allow_html=True)
+    info_callout(title="Quick Start", body="Answer the health questionnaire → Click Predict → View your heart disease risk score", variant="info")
 
     with st.expander("About This Module"):
         st.write("""
@@ -1420,17 +1395,13 @@ elif section == "Health Risk Assessment":
 # ============================================================
 elif section == "CBC Analysis":
     st.button("← Back to Home", key="back_home_cbc", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>CBC Analysis</strong></p>', unsafe_allow_html=True)
+    breadcrumb("CBC Analysis")
     section_header(
         "CBC Analysis",
         subtitle="Enter complete-blood-count values for automated classification, differential visualization, and clinical interpretation.",
         eyebrow="Hematology",
     )
-    st.markdown("""
-    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
-        <strong>Quick Start:</strong> 1️⃣ Enter your blood count values → 2️⃣ Click Analyze → 3️⃣ View flagged abnormalities
-    </div>
-    """, unsafe_allow_html=True)
+    info_callout(title="Quick Start", body="Enter your blood count values → Click Analyze → View flagged abnormalities", variant="info")
 
     with st.expander("About This Module"):
         st.write("""
@@ -1641,17 +1612,13 @@ elif section == "CBC Analysis":
 # ============================================================
 elif section == "Diabetes Screening":
     st.button("← Back to Home", key="back_home_diabetes", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Diabetes Screening</strong></p>', unsafe_allow_html=True)
+    breadcrumb("Diabetes Screening")
     section_header(
         "Diabetes Screening",
         subtitle="Comprehensive diabetes risk assessment using HbA1c, fasting glucose, and the FINDRISC questionnaire.",
         eyebrow="Endocrinology",
     )
-    st.markdown("""
-    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
-        <strong>Quick Start:</strong> 1️⃣ Enter your HbA1c, glucose, and demographics → 2️⃣ Click Screen → 3️⃣ View your diabetes risk
-    </div>
-    """, unsafe_allow_html=True)
+    info_callout(title="Quick Start", body="Enter your HbA1c, glucose, and demographics → Click Screen → View your diabetes risk", variant="info")
 
     with st.expander("About This Module"):
         st.write("""
@@ -1850,17 +1817,13 @@ elif section == "Diabetes Screening":
 # ============================================================
 elif section == "Lipid Panel / CV Risk":
     st.button("← Back to Home", key="back_home_lipid", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lipid Panel / CV Risk</strong></p>', unsafe_allow_html=True)
+    breadcrumb("Lipid Panel / CV Risk")
     section_header(
         "Lipid Panel / CV Risk",
         subtitle="Lipid classification and 10-year ASCVD risk estimation using the Pooled Cohort Equations.",
         eyebrow="Preventive Cardiology",
     )
-    st.markdown("""
-    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
-        <strong>Quick Start:</strong> 1️⃣ Enter your cholesterol panel → 2️⃣ Click Assess Risk → 3️⃣ View ASCVD risk and lipid classification
-    </div>
-    """, unsafe_allow_html=True)
+    info_callout(title="Quick Start", body="Enter your cholesterol panel → Click Assess Risk → View ASCVD risk and lipid classification", variant="info")
 
     with st.expander("About This Module"):
         st.write("""
@@ -2071,17 +2034,13 @@ elif section == "Lipid Panel / CV Risk":
 # ============================================================
 elif section == "Kidney Function":
     st.button("← Back to Home", key="back_home_kidney", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Kidney Function</strong></p>', unsafe_allow_html=True)
+    breadcrumb("Kidney Function")
     section_header(
         "Kidney Function",
         subtitle="CKD-EPI 2021 race-free eGFR estimation with KDIGO staging and risk classification.",
         eyebrow="Nephrology",
     )
-    st.markdown("""
-    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
-        <strong>Quick Start:</strong> 1️⃣ Enter serum creatinine and demographics → 2️⃣ Click Calculate → 3️⃣ View eGFR and CKD staging
-    </div>
-    """, unsafe_allow_html=True)
+    info_callout(title="Quick Start", body="Enter serum creatinine and demographics → Click Calculate → View eGFR and CKD staging", variant="info")
 
     with st.expander("About This Module"):
         st.write("""
@@ -2304,17 +2263,13 @@ elif section == "Kidney Function":
 # ============================================================
 elif section == "Lab Report Upload":
     st.button("← Back to Home", key="back_home_lab", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Lab Report Upload</strong></p>', unsafe_allow_html=True)
+    breadcrumb("Lab Report Upload")
     section_header(
         "Lab Report Upload",
         subtitle="Upload a lab report PDF for automated parsing, or explore the demo report with color-coded analysis.",
         eyebrow="Clinical Pathology",
     )
-    st.markdown("""
-    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
-        <strong>Quick Start:</strong> 1️⃣ Upload a PDF lab report → 2️⃣ Parsing happens automatically → 3️⃣ View flagged abnormal values
-    </div>
-    """, unsafe_allow_html=True)
+    info_callout(title="Quick Start", body="Upload a PDF lab report → Parsing happens automatically → View flagged abnormal values", variant="info")
 
     with st.expander("About This Module"):
         st.write("""
@@ -2362,13 +2317,7 @@ elif section == "Lab Report Upload":
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("""
-    <div style="text-align: center; padding: 32px 20px; background: #131316; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.10); margin-bottom: 16px;">
-        <div style="font-size: 2.5rem; margin-bottom: 8px;">📋</div>
-        <p style="color: #A1A1AA; font-size: 0.95rem; margin: 0;">Upload a lab report PDF for automated value extraction and analysis</p>
-        <p style="color: #71717A; font-size: 0.82rem; margin: 4px 0 0;">Supported format: PDF</p>
-    </div>
-    """, unsafe_allow_html=True)
+    upload_hint(icon_key="file-text", title="Upload a lab report PDF for automated value extraction and analysis", desc="", formats="PDF")
 
     uploaded_pdf = st.file_uploader("Upload Lab Report (PDF)", type=["pdf"], key="lab_pdf")
 
@@ -2520,17 +2469,13 @@ elif section == "Lab Report Upload":
 # ============================================================
 elif section == "AI Assistant":
     st.button("\u2190 Back to Home", key="back_home_ai", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>AI Assistant</strong></p>', unsafe_allow_html=True)
+    breadcrumb("AI Assistant")
     section_header(
         "AI Assistant",
         subtitle="Ask questions about this portal's features, tools, and how to interpret results.",
         eyebrow="Powered by Claude",
     )
-    st.markdown("""
-    <div style="background: rgba(78, 42, 132, 0.14); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; padding: 14px 20px; margin-bottom: 16px; font-size: 0.88rem; color: #836EAA;">
-        <strong>Quick Start:</strong> 1️⃣ Type your question below → 2️⃣ The assistant will help you navigate the portal
-    </div>
-    """, unsafe_allow_html=True)
+    info_callout(title="Quick Start", body="Type your question below → The assistant will help you navigate the portal", variant="info")
 
     PORTAL_SYSTEM_PROMPT = """You are a helpful assistant for the Healthcare AI Prediction Portal.
     The portal has 10 clinical AI modules:
@@ -2627,7 +2572,7 @@ elif section == "AI Assistant":
 # ============================================================
 elif section == "Privacy & Compliance":
     st.button("← Back to Home", key="back_home_privacy", on_click=navigate_to, args=("Home",))
-    st.markdown('<p style="color: #71717A; font-size: 0.85rem; margin: 0 0 8px 0;">Home / <strong>Privacy & Compliance</strong></p>', unsafe_allow_html=True)
+    breadcrumb("Privacy & Compliance")
     section_header(
         "Privacy & HIPAA Compliance",
         subtitle="Information about data handling, privacy practices, and regulatory compliance.",

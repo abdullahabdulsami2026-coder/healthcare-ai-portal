@@ -823,6 +823,56 @@ def inject_global_css() -> None:
     .ds-riskbar--warning .ds-riskbar__fill {{ background: {Color.warning}; }}
     .ds-riskbar--danger  .ds-riskbar__fill {{ background: {Color.danger};  }}
 
+    /* Breadcrumb */
+    .ds-breadcrumb {{
+        font-size: 0.78rem;
+        color: {Color.text_muted};
+        margin: 0 0 {Space.x3};
+        letter-spacing: 0.01em;
+    }}
+    .ds-breadcrumb__current {{
+        color: {Color.text_primary};
+        font-weight: 500;
+    }}
+
+    /* Upload hint */
+    .ds-upload-hint {{
+        background: {Color.bg_elevated};
+        border: 1px dashed {Color.border_strong};
+        border-radius: {Radius.lg};
+        padding: {Space.x7} {Space.x6};
+        margin-bottom: {Space.x4};
+        text-align: center;
+        transition: border-color 150ms ease, background 150ms ease;
+    }}
+    .ds-upload-hint:hover {{
+        border-color: {Color.accent};
+        background: {Color.accent_soft};
+    }}
+    .ds-upload-hint__icon {{
+        color: {Color.text_muted};
+        margin-bottom: {Space.x3};
+        display: flex; justify-content: center;
+    }}
+    .ds-upload-hint__title {{
+        font-size: {Type.body[0]};
+        font-weight: 500;
+        color: {Color.text_primary};
+        margin: 0 0 {Space.x1};
+    }}
+    .ds-upload-hint__desc {{
+        font-size: {Type.small[0]};
+        color: {Color.text_secondary};
+        margin: 0;
+    }}
+    .ds-upload-hint__formats {{
+        font-family: {Type.mono};
+        font-size: 0.78rem;
+        color: {Color.text_muted};
+        margin: {Space.x2} 0 0;
+        letter-spacing: 0.02em;
+    }}
+
     /* Disclaimer */
     .ds-disclaimer {{
         background: {Color.warning_soft};
@@ -1063,6 +1113,34 @@ def risk_bar(label: str, pct: float, variant: str = "default") -> None:
             <div class="ds-riskbar__track">
                 <div class="ds-riskbar__fill" style="width: {pct_clamped}%;"></div>
             </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+
+def breadcrumb(current: str, root: str = "Home") -> None:
+    """Small muted crumb ABOVE the section header: 'Home / Current'."""
+    st.markdown(
+        f'<p class="ds-breadcrumb">{root}  /  '
+        f'<span class="ds-breadcrumb__current">{current}</span></p>',
+        unsafe_allow_html=True,
+    )
+
+
+def upload_hint(icon_key: str, title: str, desc: str,
+                formats: str | None = None) -> None:
+    """Rendered as the 'drop zone' copy above a st.file_uploader.
+    Replaces the old dark-div-with-emoji pattern."""
+    icon_html = icon(icon_key, size=24)
+    formats_html = (
+        f'<p class="ds-upload-hint__formats">{formats}</p>'
+        if formats else ""
+    )
+    st.markdown(f"""
+        <div class="ds-upload-hint">
+            <div class="ds-upload-hint__icon">{icon_html}</div>
+            <p class="ds-upload-hint__title">{title}</p>
+            <p class="ds-upload-hint__desc">{desc}</p>
+            {formats_html}
         </div>
     """, unsafe_allow_html=True)
 
