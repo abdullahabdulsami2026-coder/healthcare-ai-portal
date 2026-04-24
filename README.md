@@ -1,109 +1,118 @@
 # Healthcare AI Prediction Portal
-## Abdullah Abdul Sami — Northwestern University MSDS (AI Track)
 
-A multi-model healthcare prediction platform that lets users upload medical data (ECG signals, chest X-rays, vital signs) and receive AI-powered diagnostic predictions with interactive dashboards.
+A Streamlit platform bundling nine clinical decision-support modules — ECG analysis, chest X-ray classification, vitals-based risk prediction, and an LLM-backed clinical chat assistant — behind a single web interface.
+
+**Live demo:** https://healthcare-ai-app-5n6p29wbkektzs8dkl86qr.streamlit.app
 
 ---
 
-## Project Structure
+## Overview
+
+The portal wraps a set of independent clinical models and clinical rule-based tools in a shared Streamlit shell. Each module exposes a clinician-facing interface: file upload for signals and imaging, guided questionnaires for risk scores, and a conversational layer for portal navigation and result interpretation. Modules share session state, theming, and a common evaluation harness; the LLM assistant is aware of the portal's structure so it can route users to the right tool.
+
+The application is deployed on Streamlit Cloud and backed by a small collection of trained artifacts (`.joblib`, `.h5`) loaded at runtime.
+
+---
+
+## Features
+
+Nine clinical decision-support modules plus a HIPAA/compliance reference page:
+
+1. **Heart / ECG Analysis** — 1D-CNN for five-class ECG classification (NORM, MI, STTC, HYP, CD) over a 12-lead, 10-second window. Note: the included training pipeline uses synthetic signals (`scripts/generate_ecg_data.py`) as a demonstration dataset; the model has not been evaluated on real clinical ECGs.
+2. **Chest X-Ray Analysis** — MobileNetV2 transfer-learning scaffold (pneumonia vs normal). The training pipeline (`scripts/train_all.py`) targets the Kaggle Chest X-Ray Pneumonia dataset. No trained artifact is checked into this repository; the app detects the absence and falls back gracefully.
+3. **Health Risk Assessment** — Soft-voting ensemble (XGBoost + LightGBM + Gradient Boosting) over engineered features from the combined UCI Heart Disease and Framingham cohorts (≈5,160 records), with SMOTE oversampling. Held-out test metrics (15% stratified split): accuracy 0.846, F1 0.544, AUC-ROC 0.786.
+4. **CBC Analysis** — Rule-based interpretation of complete blood count values with WBC differentials and clinical flagging.
+5. **Diabetes Screening** — FINDRISC questionnaire combined with HbA1c and fasting-glucose threshold logic.
+6. **Lipid Panel / Cardiovascular Risk** — ATP III lipid classification plus 10-year ASCVD risk via the Pooled Cohort Equations.
+7. **Kidney Function** — Race-free eGFR using the CKD-EPI 2021 equation with KDIGO staging and albuminuria risk classification.
+8. **Lab Report Upload** — PDF parser for uploaded lab reports, with automated value extraction and abnormal-flag highlighting.
+9. **AI Assistant** — Portal-aware chat interface backed by Anthropic's Messages API. Scoped to portal navigation and result interpretation; does not provide medical advice.
+
+A tenth page, **Privacy & Compliance**, documents HIPAA-relevant handling, data minimization, and the portal's scope limits. It is a reference page, not a predictive module.
+
+---
+
+## Tech Stack
+
+- **Application:** Python 3.11, Streamlit
+- **Modeling:** TensorFlow / Keras (ECG, X-ray), scikit-learn, XGBoost, LightGBM, imbalanced-learn (SMOTE)
+- **Data handling:** pandas, NumPy, WFDB
+- **Visualisation:** Plotly, Matplotlib
+- **LLM integration:** `anthropic` Python SDK
+- **Artifact persistence:** joblib, `.h5` / Keras serialisation
+
+Pinned versions are listed in `requirements.txt`.
+
+---
+
+## Local Setup
+
+```bash
+git clone https://github.com/abdullahabdulsami2026-coder/healthcare-ai-portal.git
+cd healthcare-ai-portal
+
+python3 -m venv venv
+source venv/bin/activate          # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+streamlit run app/streamlit_app.py
+```
+
+The app will start on `http://localhost:8501`.
+
+### Optional: retrain the models
+
+Trained artifacts live under `models/` and are loaded at runtime. To reproduce them from source:
+
+```bash
+# Synthetic ECG dataset (used for the demo ECG model)
+python scripts/generate_ecg_data.py
+
+# Heart risk model (UCI + Framingham, held-out test + full-data fit)
+python scripts/retrain_heart_model.py
+```
+
+### Optional: enable the AI Assistant
+
+Set an Anthropic API key before launching Streamlit:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+Or add it to `.streamlit/secrets.toml` (gitignored).
+
+---
+
+## Repository Structure
 
 ```
 healthcare-ai-portal/
-├── data/
-│   ├── ecg/              # PTB-XL ECG dataset files
-│   ├── xray/             # Chest X-ray dataset files
-│   └── vitals/           # Vital signs / tabular health data
-├── models/               # Saved trained models (.h5, .pkl, .joblib)
-├── notebooks/
-│   ├── 01_ecg_data_prep.ipynb
-│   ├── 02_ecg_model_training.ipynb
-│   ├── 03_xray_model_training.ipynb
-│   └── 04_vitals_model_training.ipynb
 ├── app/
-│   ├── streamlit_app.py  # Main web application
-│   ├── static/           # CSS, images
-│   └── templates/        # HTML templates (if using Flask)
-├── scripts/
-│   ├── download_data.sh  # Dataset download script
-│   └── train_all.py      # Train all models sequentially
-├── utils/
-│   ├── ecg_utils.py      # ECG preprocessing functions
-│   ├── xray_utils.py     # X-ray preprocessing functions
-│   └── model_utils.py    # Model loading and prediction helpers
+│   └── streamlit_app.py          # Single-file Streamlit application
+├── data/
+│   ├── ecg/                      # Synthetic ECG arrays (generated, gitignored)
+│   ├── vitals/                   # Tabular clinical datasets (UCI, Framingham)
+│   └── xray/                     # Chest X-ray samples
+├── models/                       # Trained model artifacts (.joblib, .h5)
+├── notebooks/                    # Exploratory notebooks
+├── scripts/                      # Data generation + training pipelines
+├── utils/                        # Clinical interpretation + design helpers
 ├── requirements.txt
+├── LICENSE
 └── README.md
 ```
 
 ---
 
-## Datasets Used
-
-### 1. PTB-XL (ECG) — PRIMARY
-- **Source**: https://physionet.org/content/ptb-xl/1.0.3/
-- **Size**: 21,837 clinical 12-lead ECGs (10 seconds each)
-- **Labels**: 71 diagnostic statements (normal, MI, STEMI, AFib, etc.)
-- **Format**: WFDB format (.dat + .hea files)
-- **License**: Open Data Commons Attribution License
-- **No credentialing required** — direct download
-
-### 2. NIH Chest X-ray14 (X-Ray)
-- **Source**: https://nihcc.app.box.com/v/ChestXray-NIHCC
-- **Size**: 112,120 frontal-view X-ray images
-- **Labels**: 14 disease labels + "No Finding"
-- **Format**: PNG images
-- **License**: CC0 Public Domain
-
-### 3. Heart Disease UCI (Vitals/Tabular)
-- **Source**: https://archive.ics.uci.edu/dataset/45/heart+disease
-- **Size**: 920 patient records
-- **Features**: Age, sex, chest pain type, blood pressure, cholesterol, etc.
-- **Format**: CSV
-- **Good for**: Quick risk prediction dashboard
-
----
-
-## Setup Instructions
-
-### Step 1: Clone and setup environment
-```bash
-cd healthcare-ai-portal
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### Step 2: Download datasets
-```bash
-chmod +x scripts/download_data.sh
-./scripts/download_data.sh
-```
-
-### Step 3: Train models (or use notebooks)
-```bash
-# Option A: Run notebooks in Jupyter/Colab
-jupyter notebook notebooks/
-
-# Option B: Run training script
-python scripts/train_all.py
-```
-
-### Step 4: Launch the web app
-```bash
-streamlit run app/streamlit_app.py
-```
-
----
-
-## For Google Colab Workflow
-1. Upload the `notebooks/` folder to Google Drive
-2. Open each notebook in Colab
-3. Train models — they auto-save to Google Drive `/models/`
-4. Download saved models to local `models/` folder
-5. Run the Streamlit app locally pointing to those models
-
----
-
 ## Author
-Abdullah Abdul Sami
-MS in Data Science (AI Specialization) — Northwestern University
-Research: Edge-AI for Cardiovascular Monitoring
+
+**Abdullah Abdul Sami** — MS Data Science, Northwestern University
+
+---
+
+## License
+
+This project is released under the MIT License. See `LICENSE` for details.
+
+The bundled clinical rule implementations (CKD-EPI 2021, ATP III, Pooled Cohort Equations, FINDRISC) reference published clinical guidelines. The portal is a technical demonstration and is not a substitute for medical advice, diagnosis, or treatment.

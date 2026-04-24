@@ -28,3 +28,15 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Planning / prompt docs — never commit internal notes to a public repo
+*_TRANSFORMATION.txt
+*_improvements.txt
+/planning/
+/notes/
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Claude Code session artifacts
+.claude/

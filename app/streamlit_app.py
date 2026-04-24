@@ -775,25 +775,28 @@ elif section == "Chest X-Ray":
 
     with st.expander("About This Module"):
         st.write("""
-        Chest X-ray analysis is a cornerstone of radiology. This module uses deep learning
-        to classify frontal chest X-ray images, detecting pneumonia versus normal findings.
-        It is useful for medical students studying radiology, researchers exploring AI in
-        medical imaging, and anyone interested in computer-aided diagnosis.
+        Chest X-ray analysis is a cornerstone of radiology. This module is a scaffold for
+        binary pneumonia-vs-normal classification of frontal chest X-rays. It is intended
+        as a reference implementation for medical students, researchers exploring AI in
+        medical imaging, and developers building on top of the portal — not a clinical tool.
         """)
 
     with st.expander("How the Model Works"):
         st.write("""
-        **Architecture:** MobileNetV2 with transfer learning (pretrained on ImageNet)
+        **Architecture:** MobileNetV2 with transfer learning (pretrained on ImageNet), a
+        global-average-pool head, and a single sigmoid output for pneumonia vs normal.
 
-        **Training Data:** NIH Chest X-ray14 dataset with 112,120 frontal-view chest X-ray
-        images annotated with 14 disease labels. Binary classifier trained for pneumonia detection.
+        **Training pipeline:** `scripts/train_all.py` targets the **Kaggle Chest X-Ray
+        Pneumonia dataset** (Paul Mooney). Images are resized to 224×224, normalized to
+        the [0, 1] range, and augmented with random flips, rotations, and small shifts
+        during training.
 
-        **Preprocessing:** Images are resized to 224x224, normalized to [0, 1] range, and
-        augmented with random flips and rotations during training.
+        **Trained artifact:** No trained model is checked into this repository. If a
+        `models/xray_classifier.h5` artifact is not loaded at runtime, the module runs in
+        scaffold mode and does not produce predictions. The training code and architecture
+        are included for reproducibility.
 
-        **Performance:** Accuracy varies by class; optimized for pneumonia sensitivity.
-
-        **Pipeline:** Chest X-Ray Image -> Resize & Normalize -> MobileNetV2 -> Pneumonia vs Normal + Confidence
+        **Pipeline:** Chest X-Ray Image → Resize & Normalize → MobileNetV2 → Pneumonia vs Normal + Confidence
         """)
 
     with st.expander("Input Requirements"):
@@ -880,19 +883,16 @@ elif section == "Chest X-Ray":
                 except Exception as e:
                     st.error(f"Prediction error: {e}")
             else:
-                result_card(
-                    title="Demo Mode",
-                    subtitle="X-ray model not loaded. Showing sample prediction.",
-                    variant="warning",
+                st.info(
+                    "**Scaffold mode.** This X-ray module is currently running without a "
+                    "trained classifier — no `models/xray_classifier.h5` artifact is "
+                    "available in this deployment. The training pipeline "
+                    "(`scripts/train_all.py`) and the architecture (MobileNetV2 with "
+                    "transfer learning) are included in this repository for "
+                    "reproducibility, but the module will not produce predictions until a "
+                    "trained model artifact is loaded at runtime.",
+                    icon="ℹ️",
                 )
-                demo_data = pd.DataFrame({
-                    "Condition": ["Normal", "Pneumonia"],
-                    "Probability (%)": [82.3, 17.7]
-                })
-                fig = px.pie(demo_data, values="Probability (%)", names="Condition",
-                             color_discrete_sequence=["#34D399", "#F87171"], hole=0.4)
-                fig.update_layout(height=300, font=dict(family="Inter"), margin=dict(t=20, b=20), template="plotly_dark")
-                st.plotly_chart(fig, use_container_width=True, key="xray_demo_pie")
 
     # --- Upload Tab ---
     with tab_upload:
@@ -2482,17 +2482,18 @@ elif section == "AI Assistant":
     info_callout(title="Quick Start", body="Type your question below → The assistant will help you navigate the portal", variant="info")
 
     PORTAL_SYSTEM_PROMPT = """You are a helpful assistant for the Healthcare AI Prediction Portal.
-    The portal has 10 clinical AI modules:
-    1. Heart/ECG Analysis - 1D-CNN model, 99.5% accuracy, classifies 12-lead ECG recordings
-    2. Chest X-Ray Analysis - MobileNetV2 transfer learning, detects pneumonia vs normal
-    3. Health Risk Assessment - XGBoost/LightGBM/GBM/RF voting ensemble, 98.6% accuracy, 99.9% AUC-ROC, trained on 5,160 UCI + Framingham records
-    4. CBC Analysis - Clinical algorithm for complete blood count interpretation
-    5. Diabetes Screening - FINDRISC questionnaire + HbA1c/glucose thresholds
-    6. Lipid Panel/CV Risk - ATP III classification + Pooled Cohort ASCVD risk
-    7. Kidney Function - CKD-EPI 2021 race-free eGFR with KDIGO staging
-    8. Lab Report Upload - PDF parsing for automated lab value extraction
-    9. AI Assistant - This chat interface
-    10. Privacy & Compliance - HIPAA compliance information
+    The portal contains nine clinical decision-support modules plus a HIPAA/compliance reference page:
+    1. Heart / ECG Analysis - 1D-CNN for five-class ECG classification (NORM, MI, STTC, HYP, CD) over a 12-lead, 10-second window. Trained on synthetic 12-lead signals generated by scripts/generate_ecg_data.py as a demonstration dataset; the model has not been evaluated on real clinical ECGs.
+    2. Chest X-Ray Analysis - MobileNetV2 transfer-learning scaffold for pneumonia vs normal classification. The training pipeline (scripts/train_all.py) targets the Kaggle Chest X-Ray Pneumonia dataset (Paul Mooney). No trained model artifact is checked into the repository; the module runs in scaffold mode if no artifact is loaded at runtime.
+    3. Health Risk Assessment - Soft-voting ensemble (XGBoost + LightGBM + Gradient Boosting) over engineered features from the combined UCI Heart Disease and Framingham cohorts (~5,160 records), with SMOTE oversampling. Held-out test metrics (15% stratified split): accuracy 0.846, F1 0.544, AUC-ROC 0.786 (scripts/retrain_heart_model.py).
+    4. CBC Analysis - Rule-based interpretation of complete blood count values with WBC differentials and clinical flagging.
+    5. Diabetes Screening - FINDRISC questionnaire combined with HbA1c and fasting-glucose threshold logic.
+    6. Lipid Panel / CV Risk - ATP III lipid classification plus 10-year ASCVD risk via the Pooled Cohort Equations.
+    7. Kidney Function - Race-free eGFR using the CKD-EPI 2021 equation with KDIGO staging and albuminuria risk classification.
+    8. Lab Report Upload - PDF parser for uploaded lab reports, with automated value extraction and abnormal-flag highlighting.
+    9. AI Assistant - This chat interface, backed by Anthropic's Messages API. Scoped to portal navigation and result interpretation; does not provide medical advice.
+
+    A tenth page, Privacy & Compliance, documents HIPAA-relevant handling, data minimization, and the portal's scope limits. It is a reference page, not a predictive module.
 
     You help users navigate the portal, understand results, and troubleshoot issues.
     You do NOT provide medical advice. If asked medical questions, redirect to a healthcare provider.
@@ -2537,11 +2538,11 @@ elif section == "AI Assistant":
             # Keyword-based fallback
             prompt_lower = prompt.lower()
             if any(w in prompt_lower for w in ["ecg", "heart", "ekg", "arrhythmia"]):
-                response = "The **Heart / ECG Analysis** module uses a 1D-CNN model trained on 21,837 PTB-XL ECG recordings. It accepts CSV, DAT, HEA, or NPY files. Upload a 12-lead ECG or try the built-in sample data. The model classifies into 5 categories: Normal, ST/T Change, Conduction Disturbance, Hypertrophy, and MI."
+                response = "The **Heart / ECG Analysis** module uses a 1D-CNN for five-class ECG classification (NORM, MI, STTC, HYP, CD) over a 12-lead, 10-second window. It accepts CSV, DAT, HEA, or NPY files. Note: the model is trained on synthetic 12-lead signals generated by `scripts/generate_ecg_data.py` as a demonstration dataset and has not been evaluated on real clinical ECGs."
             elif any(w in prompt_lower for w in ["xray", "x-ray", "chest", "pneumonia", "lung"]):
-                response = "The **Chest X-Ray** module uses MobileNetV2 transfer learning trained on the NIH Chest X-ray14 dataset (112,120 images). Upload a frontal chest X-ray (PNG/JPEG) to get a pneumonia vs normal classification with confidence scores."
+                response = "The **Chest X-Ray** module is a MobileNetV2 transfer-learning scaffold for pneumonia vs normal classification. The training pipeline in `scripts/train_all.py` targets the Kaggle Chest X-Ray Pneumonia dataset (Paul Mooney). No trained model artifact is checked into this repository; the module runs in scaffold mode if no artifact is loaded at runtime. It accepts PNG or JPEG images."
             elif any(w in prompt_lower for w in ["risk", "questionnaire", "heart disease"]):
-                response = "The **Health Risk Assessment** is a step-by-step questionnaire that collects 13 clinical features (age, blood pressure, cholesterol, etc.) and uses an XGBoost/LightGBM/GBM/RF voting ensemble (98.6% accuracy, 99.9% AUC-ROC) trained on 5,160 combined UCI + Framingham records to estimate heart disease risk on a 0-100% scale."
+                response = "The **Health Risk Assessment** is a step-by-step questionnaire that collects 13 clinical features (age, blood pressure, cholesterol, etc.) and uses a soft-voting ensemble (XGBoost + LightGBM + Gradient Boosting) trained on the combined UCI Heart Disease and Framingham cohorts (~5,160 records) with SMOTE oversampling. Held-out test metrics (15% stratified split): accuracy 0.846, F1 0.544, AUC-ROC 0.786 — see `scripts/retrain_heart_model.py`."
             elif any(w in prompt_lower for w in ["cbc", "blood count", "hemoglobin", "platelet", "wbc"]):
                 response = "The **CBC Analysis** module interprets complete blood count values using clinical reference ranges. Enter your WBC, RBC, hemoglobin, hematocrit, platelets, and differential counts. It flags abnormalities with color-coded badges."
             elif any(w in prompt_lower for w in ["diabetes", "glucose", "hba1c", "findrisc", "sugar"]):
